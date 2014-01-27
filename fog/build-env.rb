@@ -56,8 +56,7 @@ def create_server(name)
     :flavor_id => flavor.id,
     :image_id => image.id,
     :private_key_path => 'sxsw_rsa',
-    # :key_pair => Fog::Compute::AWS::KeyPair.new(:name => 'sxsw-demo')
-    :keypair => 'sxsw-demo'
+    :key_name => 'sxsw-demo'
   })
   
   server = service.servers.create server_config
@@ -132,9 +131,9 @@ def setup_haproxy(server, web_server)
   puts "[sxsw-haproxy] haproxy server configuration complete"
 end
 
-def db_server_address(db_server)
+def server_address(server)
   #amazon prefers the public address
-  provider == :aws ? db_server.public_ip_address : db_server.private_ip_address
+  provider == :aws ? server.public_ip_address : server.private_ip_address
 end
 
 def database_yml(db_server)
@@ -146,7 +145,7 @@ def database_yml(db_server)
       pool: 5
       username: sxsw
       password: austin123
-      host: #{db_server_address(db_server)}
+      host: #{server_address(db_server)}
       port: 3306
     ]
 end
@@ -181,7 +180,7 @@ def haproxy_config(server)
     listen  web-proxy 0.0.0.0:80
             mode http
             balance roundrobin
-            server sxsw-web #{server.public_ip_address}:3000
+            server sxsw-web #{server_address(server)}:3000
     ]
 end
 
