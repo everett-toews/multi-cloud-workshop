@@ -21,7 +21,8 @@ require 'fog'
     :region => 'us-west-2',    
   },
   :server_opts => {
-    :username => 'ubuntu'
+    :username => 'ubuntu',
+    :groups => ['sxsw-demo']
   },
   :flavor_name => 'Medium Instance', #'Micro Instance',
   :image_name => 'ubuntu-precise-12.04-amd64-server-20131003'
