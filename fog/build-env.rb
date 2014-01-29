@@ -5,8 +5,8 @@ require 'fog'
   :service_opts => {
     :provider => 'rackspace',
     :version => :v2,
-    :rackspace_username => ENV['RAX_USERNAME'] || Fog.credentals[:rackspace_username],
-    :rackspace_api_key =>  ENV['RAX_API_KEY'] || Fog.credentals[:rackspace_api_key],
+    :rackspace_username => ENV['RAX_USERNAME'] || Fog.credentials[:rackspace_username],
+    :rackspace_api_key =>  ENV['RAX_API_KEY'] || Fog.credentials[:rackspace_api_key],
     :rackspace_region => :ord,
   },
   :flavor_name => '1 GB Performance',
@@ -16,8 +16,8 @@ require 'fog'
 @config[:aws] = {
   :service_opts => {
     :provider => 'aws',
-    :aws_access_key_id => ENV['AWS_ACCESS_KEY'] || || Fog.credentals[:aws_access_key_id],
-    :aws_secret_access_key => ENV['AWS_SECRET_ACCESS_KEY'] || Fog.credentals[:aws_secret_access_key],
+    :aws_access_key_id => ENV['AWS_ACCESS_KEY'] || Fog.credentials[:aws_access_key_id],
+    :aws_secret_access_key => ENV['AWS_SECRET_ACCESS_KEY'] || Fog.credentials[:aws_secret_access_key],
     :region => 'us-west-2',
   },
   :server_opts => {
@@ -31,9 +31,9 @@ require 'fog'
   :service_opts => {
     :provider => 'hp',
     :version => :v2,
-    :hp_secret_key => ENV['HP_SECRET_KEY'] || Fog.credentals[:hp_secret_key],
-    :hp_access_key => ENV['HP_ACCESS_KEY'] || Fog.credentals[:hp_access_key],
-    :hp_tenant_id => ENV['HP_TENANT_ID'] || Fog.credentals[:hp_tenant_id],
+    :hp_secret_key => ENV['HP_SECRET_KEY'] || Fog.credentials[:hp_secret_key],
+    :hp_access_key => ENV['HP_ACCESS_KEY'] || Fog.credentials[:hp_access_key],
+    :hp_tenant_id => ENV['HP_TENANT_ID'] || Fog.credentials[:hp_tenant_id],
     :hp_avl_zone => 'region-a.geo-1'
   },
   :server_opts => {
@@ -45,7 +45,7 @@ require 'fog'
 }
 
 def config
-  @config
+  @config[provider]
 end
 
 def provider
@@ -53,21 +53,21 @@ def provider
 end
 
 def flavor
-  @flavor ||= service.flavors.find {|flavor| flavor.name =~ /#{config[provider][:flavor_name]}/ }
+  @flavor ||= service.flavors.find {|flavor| flavor.name =~ /#{config[:flavor_name]}/ }
 end
 
 def image
-  @image ||= service.images.find {|image| image.name =~ /#{config[provider][:image_name]}/}
+  @image ||= service.images.find {|image| image.name =~ /#{config[:image_name]}/}
 end
 
 def service
-  @service ||= Fog::Compute.new config[provider][:service_opts]
+  @service ||= Fog::Compute.new config[:service_opts]
 end
 
 def create_server(name)
   puts "[#{name}] Server Creating"
   
-  server_config = config[provider][:server_opts] || {}
+  server_config = config[:server_opts] || {}
   server_config.merge!({
     :name => name,
     :flavor_id => flavor.id,
@@ -206,14 +206,14 @@ end
 def carrierwave_config
   %Q[
     CarrierWave.configure do |config|
-      config.fog_credentials = #{config[provider][:service_opts].to_s}
+      config.fog_credentials = #{config[:service_opts].to_s}
       config.fog_directory  = "sxsw-demo"
     end
     ]
 end
 
 def setup_object_storage
-  storage = Fog::Storage.new config[provider][:service_opts]
+  storage = Fog::Storage.new config[:service_opts]
   dir = storage.directories.get 'sxsw-demo'
   unless dir
     storage.directories.create :key => 'sxsw-demo', :public => true
