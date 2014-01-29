@@ -5,8 +5,8 @@ require 'fog'
   :service_opts => {
     :provider => 'rackspace',
     :version => :v2,
-    :rackspace_username => RACKSPACE_USER_NAME,
-    :rackspace_api_key =>  RACKSPACE_API_KEY,
+    :rackspace_username => ENV['RAX_USERNAME'] || Fog.credentals[:rackspace_username],
+    :rackspace_api_key =>  ENV['RAX_API_KEY'] || Fog.credentals[:rackspace_api_key],
     :rackspace_region => :ord,
   },
   :flavor_name => '1 GB Performance',
@@ -16,9 +16,9 @@ require 'fog'
 @config[:aws] = {
   :service_opts => {
     :provider => 'aws',
-    :aws_access_key_id => AWS_ACCESS_KEY_ID,
-    :aws_secret_access_key => AWS_SECRET_ACCESS_KEY,
-    :region => 'us-west-2',    
+    :aws_access_key_id => ENV['AWS_ACCESS_KEY'] || || Fog.credentals[:aws_access_key_id],
+    :aws_secret_access_key => ENV['AWS_SECRET_ACCESS_KEY'] || Fog.credentals[:aws_secret_access_key],
+    :region => 'us-west-2',
   },
   :server_opts => {
     :username => 'ubuntu',
@@ -26,6 +26,22 @@ require 'fog'
   },
   :flavor_name => 'Medium Instance', #'Micro Instance',
   :image_name => 'ubuntu-precise-12.04-amd64-server-20131003'
+}
+@config[:hp] = {
+  :service_opts => {
+    :provider => 'hp',
+    :version => :v2,
+    :hp_secret_key => ENV['HP_SECRET_KEY'] || Fog.credentals[:hp_secret_key],
+    :hp_access_key => ENV['HP_ACCESS_KEY'] || Fog.credentals[:hp_access_key],
+    :hp_tenant_id => ENV['HP_TENANT_ID'] || Fog.credentals[:hp_tenant_id],
+    :hp_avl_zone => 'region-a.geo-1'
+  },
+  :server_opts => {
+    :username => 'ubuntu',
+    :security_groups => ['sxsw-demo']
+  },
+  :flavor_name => 'standard.xsmall',
+  :image_name => 'Ubuntu Precise 12.04 LTS Server 64-bit 20121026'
 }
 
 def config
@@ -61,7 +77,14 @@ def create_server(name)
   })
   
   server = service.servers.create server_config
+  assign_public_ip_address_if_necessary(server)
   server
+end
+
+def assign_public_ip_address_if_necessary(server)
+  return unless provider == :hp
+  server.wait_for { ready? }
+  address = service.addresses.create :server => server
 end
 
 def ssh(server, name, commands, debug = true)
@@ -132,11 +155,6 @@ def setup_haproxy(server, web_server)
   puts "[sxsw-haproxy] haproxy server configuration complete"
 end
 
-def server_address(server)
-  #amazon prefers the public address
-  provider == :aws ? server.public_ip_address : server.private_ip_address
-end
-
 def database_yml(db_server)
   %Q[
     development:
@@ -146,7 +164,7 @@ def database_yml(db_server)
       pool: 5
       username: sxsw
       password: austin123
-      host: #{server_address(db_server)}
+      host: #{db_server.private_ip_address}
       port: 3306
     ]
 end
@@ -181,7 +199,7 @@ def haproxy_config(server)
     listen  web-proxy 0.0.0.0:80
             mode http
             balance roundrobin
-            server sxsw-web #{server_address(server)}:3000
+            server sxsw-web #{server.private_ip_address}:3000
     ]
 end
 
@@ -203,11 +221,11 @@ def setup_object_storage
 end
 
 def security_group_exist?
-  service.security_groups.get('sxsw-demo') != nil
+  group = service.security_groups.find {|group| group.name == 'sxsw-demo' } != nil
 end
 
 def setup_security_group
-  return unless provider == :aws
+  return if provider == :rackspace
   return if security_group_exist?
   puts "[security group] Creating security group sxsw-demo"
   
