@@ -5,7 +5,10 @@
 *.war
 *.ear
 
-lib/
+jclouds/lib/
 target/
 .idea/
 *.iml
+
+.DS_Store
+
