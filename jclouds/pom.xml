@@ -1,0 +1,47 @@
+<?xml version="1.0"?>
+<project xmlns="http://maven.apache.org/POM/4.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+  xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
+  <modelVersion>4.0.0</modelVersion>
+  <properties>
+    <jclouds.version>1.7.0</jclouds.version>
+  </properties>
+  <name>SXSW 2014 Cloud Portability with Multi-Cloud Toolkits Workshop</name>
+  <description>https://github.com/rackerlabs/sxsw-2014-workshop/</description>
+  <groupId>sxsw.2014.workshop</groupId>
+  <artifactId>sxsw-2014-workshop</artifactId>
+  <version>1.0</version>
+  <dependencies>
+    <!-- jclouds Dependencies -->
+    <dependency>
+      <groupId>org.apache.jclouds.driver</groupId>
+      <artifactId>jclouds-slf4j</artifactId>
+      <version>${jclouds.version}</version>
+    </dependency>
+    <dependency>
+      <groupId>org.apache.jclouds.driver</groupId>
+      <artifactId>jclouds-sshj</artifactId>
+      <version>${jclouds.version}</version>
+    </dependency>
+    <dependency>
+      <groupId>ch.qos.logback</groupId>
+      <artifactId>logback-classic</artifactId>
+      <version>1.0.13</version>
+    </dependency>
+    <!-- Cloud Provider Dependencies -->
+    <dependency>
+      <groupId>org.apache.jclouds.provider</groupId>
+      <artifactId>aws-ec2</artifactId>
+      <version>${jclouds.version}</version>
+    </dependency>
+    <dependency>
+      <groupId>org.apache.jclouds.provider</groupId>
+      <artifactId>hpcloud-compute</artifactId>
+      <version>${jclouds.version}</version>
+    </dependency>
+    <dependency>
+      <groupId>org.apache.jclouds.provider</groupId>
+      <artifactId>rackspace-cloudservers-us</artifactId>
+      <version>${jclouds.version}</version>
+    </dependency>
+  </dependencies>
+</project>
