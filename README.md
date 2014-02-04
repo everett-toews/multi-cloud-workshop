@@ -1,4 +1,4 @@
-SXSW 2014 Workshop
-==================
+Multi-Cloud Workshop
+====================
 
-Code for the SXSW 2014 Cloud Portability With Multi-Cloud Toolkits workshop
+The code and presentation for this workshop are in the gh-pages branch.
