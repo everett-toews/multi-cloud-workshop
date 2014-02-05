@@ -30,7 +30,7 @@ require 'fog'
 @config[:hp] = {
   :service_opts => {
     :provider => 'hp',
-    :version => :v2,
+    :version => :v1,
     :hp_secret_key => ENV['HP_SECRET_KEY'] || Fog.credentials[:hp_secret_key],
     :hp_access_key => ENV['HP_ACCESS_KEY'] || Fog.credentials[:hp_access_key],
     :hp_tenant_id => ENV['HP_TENANT_ID'] || Fog.credentials[:hp_tenant_id],
@@ -49,7 +49,7 @@ def config
 end
 
 def provider
-  :rackspace
+  :hp
 end
 
 def flavor
@@ -231,7 +231,11 @@ def setup_security_group
   
   group = service.security_groups.create :name => 'sxsw-demo', :description => 'This group was created for the SXSW Cloud Portability with Multi-Cloud Toolkits workshop'
   [80, 22, 3000, 3306].each do |port|
-    group.authorize_port_range port..port, :ip_protocol => 'tcp'
+    if provider == :hp
+      group.create_rule port..port, 'tcp'
+    elsif provider == :aws
+      group.authorize_port_range port..port, :ip_protocol => 'tcp'
+    end
   end
 end
 
