@@ -5,8 +5,8 @@ require 'fog'
   :service_opts => {
     :provider => 'rackspace',
     :version => :v2,
-    :rackspace_username => ENV['RAX_USERNAME'] || Fog.credentials[:rackspace_username],
-    :rackspace_api_key =>  ENV['RAX_API_KEY'] || Fog.credentials[:rackspace_api_key],
+    :rackspace_username => ENV['RACKSPACE_USERNAME'] || Fog.credentials[:rackspace_username],
+    :rackspace_api_key =>  ENV['RACKSPACE_API_KEY'] || Fog.credentials[:rackspace_api_key],
     :rackspace_region => :ord,
   },
   :flavor_name => '1 GB Performance',
@@ -49,7 +49,7 @@ def config
 end
 
 def provider
-  :rackspace
+  :hp
 end
 
 def flavor
@@ -224,15 +224,38 @@ def security_group_exist?
   group = service.security_groups.find {|group| group.name == 'sxsw-demo' } != nil
 end
 
-def setup_security_group
-  return if provider == :rackspace
-  return if security_group_exist?
+def setup_hp_security_group
+  network_service = Fog::HP::Network.new config[:service_opts]
+  return if network_service.security_groups.find {|group| group.name == 'sxsw-demo' }
+
+  puts "[security group] Creating security group sxsw-demo"
+  group = network_service.security_groups.create :name => 'sxsw-demo',
+    :description => 'This group was created for the SXSW Cloud Portability with Multi-Cloud Toolkits workshop'
+
+  [80, 22, 3000, 3306].each do |port|
+    network_service.security_group_rules.create :port_range_min => port,
+      :port_range_max => port,
+      :protocol => :tcp,
+      :direction => :ingress,
+      :tenant_id => group.tenant_id,
+      :security_group_id => group.id
+  end
+end
+
+def setup_aws_security_group
+  return if service.security_groups.find {|group| group.name == 'sxsw-demo' }
   puts "[security group] Creating security group sxsw-demo"
   
   group = service.security_groups.create :name => 'sxsw-demo', :description => 'This group was created for the SXSW Cloud Portability with Multi-Cloud Toolkits workshop'
   [80, 22, 3000, 3306].each do |port|
     group.authorize_port_range port..port, :ip_protocol => 'tcp'
   end
+end
+
+def setup_security_group
+  return if provider == :rackspace
+  setup_aws_security_group if provider == :aws
+  setup_hp_security_group if provider == :hp
 end
 
 def key_pair_exist?
