@@ -5,10 +5,10 @@
   <properties>
     <jclouds.version>1.7.0</jclouds.version>
   </properties>
-  <name>SXSW 2014 Cloud Portability with Multi-Cloud Toolkits Workshop</name>
-  <description>https://github.com/rackerlabs/sxsw-2014-workshop/</description>
-  <groupId>sxsw.2014.workshop</groupId>
-  <artifactId>sxsw-2014-workshop</artifactId>
+  <name>Cloud Portability with Multi-Cloud Toolkits Workshop</name>
+  <description>https://github.com/rackerlabs/multi-cloud-workshop/</description>
+  <groupId>multi.cloud.workshop</groupId>
+  <artifactId>multi-cloud-workshop</artifactId>
   <version>1.0</version>
   <dependencies>
     <!-- jclouds Dependencies -->
