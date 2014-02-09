@@ -3,7 +3,6 @@ package com.rackspace;
 import com.google.common.base.Charsets;
 import com.google.common.base.Joiner;
 import com.google.common.collect.ImmutableSet;
-import com.google.common.collect.Lists;
 import com.google.common.io.Files;
 import com.google.common.io.Resources;
 import com.google.inject.Module;
@@ -14,6 +13,7 @@ import org.jclouds.aws.ec2.features.AWSKeyPairApi;
 import org.jclouds.compute.ComputeService;
 import org.jclouds.compute.ComputeServiceContext;
 import org.jclouds.compute.RunNodesException;
+import org.jclouds.compute.config.ComputeServiceProperties;
 import org.jclouds.compute.domain.NodeMetadata;
 import org.jclouds.compute.domain.SecurityGroup;
 import org.jclouds.compute.domain.Template;
@@ -99,6 +99,8 @@ public class MultiCloudWorkshop {
     public MultiCloudWorkshop() throws IOException {
         initializeProviderProperties();
 
+        logger.info(format("Multi-Cloud Workshop on %s", providerProps.get(NAME)));
+
         Iterable<Module> modules = ImmutableSet.<Module>of(
                 new SLF4JLoggingModule(),
                 new SshjSshClientModule());
@@ -106,6 +108,7 @@ public class MultiCloudWorkshop {
         Properties overrides = new Properties();
         overrides.setProperty(POLL_INITIAL_PERIOD, "30000");
         overrides.setProperty(POLL_MAX_PERIOD, "30000");
+        overrides.setProperty(ComputeServiceProperties.TIMEOUT_SCRIPT_COMPLETE, "1200000");
 
         ComputeServiceContext context = ContextBuilder.newBuilder(providerProps.get(NAME))
                 .credentials(providerProps.get(IDENTITY), providerProps.get(CREDENTIAL))
@@ -132,28 +135,50 @@ public class MultiCloudWorkshop {
 
     private void setupSecurityGroups() {
         if (!providerProps.get(PROVIDER).equals("rackspace")) {
-            SecurityGroupExtension securityGroupExtension = computeService.getSecurityGroupExtension().get();
+            logger.info("Setup security groups");
 
+            SecurityGroupExtension securityGroupExtension = computeService.getSecurityGroupExtension().get();
             Location location = new LocationBuilder()
                     .scope(LocationScope.ZONE)
                     .id(providerProps.get(LOCATION))
                     .description("Multi-Cloud Workshop")
                     .build();
 
-            IpPermission port22 = IpPermission.builder().ipProtocol(IpProtocol.TCP).fromPort(22).toPort(22).build();
-            IpPermission port80 = IpPermission.builder().ipProtocol(IpProtocol.TCP).fromPort(80).toPort(80).build();
-            IpPermission port3000 = IpPermission.builder().ipProtocol(IpProtocol.TCP).fromPort(3000).toPort(3000).build();
-            IpPermission port3306 = IpPermission.builder().ipProtocol(IpProtocol.TCP).fromPort(3306).toPort(3306).build();
+            if (securityGroupExists(location)) {
+                logger.info(format("Security group %s already exists", MCW));
+                return;
+            }
+
+            IpPermission port22 = IpPermission.builder().ipProtocol(IpProtocol.TCP).fromPort(22).toPort(22).cidrBlock("0.0.0.0/0").build();
+            IpPermission port80 = IpPermission.builder().ipProtocol(IpProtocol.TCP).fromPort(80).toPort(80).cidrBlock("0.0.0.0/0").build();
+            IpPermission port3000 = IpPermission.builder().ipProtocol(IpProtocol.TCP).fromPort(3000).toPort(3000).cidrBlock("0.0.0.0/0").build();
+            IpPermission port3306 = IpPermission.builder().ipProtocol(IpProtocol.TCP).fromPort(3306).toPort(3306).cidrBlock("0.0.0.0/0").build();
 
             SecurityGroup securityGroup = securityGroupExtension.createSecurityGroup(MCW, location);
             securityGroupExtension.addIpPermission(port22, securityGroup);
             securityGroupExtension.addIpPermission(port80, securityGroup);
             securityGroupExtension.addIpPermission(port3000, securityGroup);
             securityGroupExtension.addIpPermission(port3306, securityGroup);
+
+            logger.info(format("Created security group %s", MCW));
         }
     }
 
+    private boolean securityGroupExists(Location location) {
+        SecurityGroupExtension securityGroupExtension = computeService.getSecurityGroupExtension().get();
+
+        for (SecurityGroup securityGroup: securityGroupExtension.listSecurityGroupsInLocation(location)) {
+            if (securityGroup.getName().equals("jclouds-" + MCW)) {
+                return true;
+            }
+        }
+
+        return false;
+    }
+
     private void setupKeyPair() throws IOException {
+        logger.info("Setup key pair");
+
         if (keyPairExists()) {
             logger.info(format("Key pair %s already exists", MCW));
             return;
@@ -210,21 +235,22 @@ public class MultiCloudWorkshop {
         }
     }
 
-    private Map<String, NodeMetadata> createServers() throws RunNodesException {
-        Set<String> nodeNames = ImmutableSet.of(LOAD_BALANCER, WEB_SERVER_01, WEB_SERVER_02, DATABASE);
+    private Map<String, NodeMetadata> createServers() throws RunNodesException, IOException {
+        Set<String> nodeNames = ImmutableSet.of(DATABASE, WEB_SERVER_01, WEB_SERVER_02, LOAD_BALANCER);
 
         logger.info(format("Creating servers %s", Joiner.on(", ").join(nodeNames)));
         logger.info("Check log/jclouds-wire.log for progress");
 
         TemplateOptions options;
+        String privateKey = Resources.toString(getResource(PRIVATE_KEY), Charsets.UTF_8);
 
         if (providerProps.get(PROVIDER).equals("aws")) {
-            options = AWSEC2TemplateOptions.Builder.keyPair(MCW).securityGroups(MCW).nodeNames(nodeNames);
+            options = AWSEC2TemplateOptions.Builder.nodeNames(nodeNames).keyPair(MCW).overrideLoginPrivateKey(privateKey).securityGroups(MCW);
         }
         else {
-            options = NovaTemplateOptions.Builder.keyPairName(MCW).securityGroups(MCW).nodeNames(nodeNames);
+            options = NovaTemplateOptions.Builder.nodeNames(nodeNames).keyPairName(MCW).overrideLoginPrivateKey(privateKey).securityGroups(MCW);
         }
-
+        
         ZoneAndId zoneAndId = ZoneAndId.fromZoneAndId(providerProps.get(LOCATION), providerProps.get(HARDWARE));
 
         Template template = computeService.templateBuilder()
@@ -251,14 +277,16 @@ public class MultiCloudWorkshop {
         return nameToNode;
     }
 
-    private void setupDatabase(NodeMetadata node) {
+    private void setupDatabase(NodeMetadata node) throws IOException {
         logger.info(format("Database %s configuration started", node.getName()));
         logger.info("Check log/jclouds-ssh.log for progress");
+
 
         RunScriptOptions options = RunScriptOptions.Builder
                 .blockOnComplete(true);
 
         String script = new ScriptBuilder()
+                .addStatement(exec("sleep 1"))
                 .addStatement(exec("sudo apt-get -q -y update"))
                 .addStatement(exec("sudo apt-get -q -y upgrade"))
                 .addStatement(exec("sudo debconf-set-selections <<< 'mysql-server mysql-server/root_password password admin123'"))
@@ -282,6 +310,7 @@ public class MultiCloudWorkshop {
                     .blockOnComplete(true);
 
             String script = new ScriptBuilder()
+                    .addStatement(exec("sleep 1"))
                     .addStatement(exec("sudo apt-get -q -y update"))
                     .addStatement(exec("sudo apt-get -q -y upgrade"))
                     .addStatement(exec("sudo apt-get -q -y install apache2"))
@@ -314,6 +343,7 @@ public class MultiCloudWorkshop {
                 .blockOnComplete(true);
 
         String script = new ScriptBuilder()
+                .addStatement(exec("sleep 1"))
                 .addStatement(exec("sudo apt-get -q -y update"))
                 .addStatement(exec("sudo apt-get -q -y upgrade"))
                 .addStatement(exec("sudo apt-get -q -y install haproxy"))
