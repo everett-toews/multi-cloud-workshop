@@ -4,10 +4,11 @@ import com.google.common.base.Charsets;
 import com.google.common.base.Joiner;
 import com.google.common.base.Stopwatch;
 import com.google.common.collect.ImmutableSet;
-import com.google.common.io.Files;
 import com.google.common.io.Resources;
 import com.google.inject.Module;
 import org.jclouds.ContextBuilder;
+import org.jclouds.aws.ec2.AWSEC2Api;
+import org.jclouds.aws.ec2.features.AWSKeyPairApi;
 import org.jclouds.compute.ComputeService;
 import org.jclouds.compute.ComputeServiceContext;
 import org.jclouds.compute.RunNodesException;
@@ -16,19 +17,23 @@ import org.jclouds.compute.domain.NodeMetadata;
 import org.jclouds.compute.domain.Template;
 import org.jclouds.compute.options.RunScriptOptions;
 import org.jclouds.compute.options.TemplateOptions;
+import org.jclouds.ec2.compute.options.EC2TemplateOptions;
 import org.jclouds.logging.slf4j.config.SLF4JLoggingModule;
+import org.jclouds.openstack.nova.v2_0.NovaApi;
+import org.jclouds.openstack.nova.v2_0.NovaAsyncApi;
+import org.jclouds.openstack.nova.v2_0.compute.options.NovaTemplateOptions;
+import org.jclouds.openstack.nova.v2_0.domain.KeyPair;
+import org.jclouds.openstack.nova.v2_0.extensions.KeyPairApi;
+import org.jclouds.rest.RestContext;
 import org.jclouds.scriptbuilder.ScriptBuilder;
 import org.jclouds.scriptbuilder.domain.OsFamily;
 import org.jclouds.sshj.config.SshjSshClientModule;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import java.io.File;
 import java.io.IOException;
 import java.util.*;
-import java.util.concurrent.TimeUnit;
 
-import static com.google.common.base.Charsets.UTF_8;
 import static com.google.common.collect.Iterables.getOnlyElement;
 import static com.google.common.collect.Lists.newArrayList;
 import static com.google.common.collect.Maps.newHashMap;
@@ -38,7 +43,6 @@ import static com.rackspace.MultiCloudWorkshop.ProviderProperty.*;
 import static java.lang.String.format;
 import static org.jclouds.compute.config.ComputeServiceProperties.POLL_INITIAL_PERIOD;
 import static org.jclouds.compute.config.ComputeServiceProperties.POLL_MAX_PERIOD;
-import static org.jclouds.compute.predicates.NodePredicates.inGroup;
 import static org.jclouds.openstack.nova.v2_0.domain.zonescoped.ZoneAndId.fromZoneAndId;
 import static org.jclouds.scriptbuilder.domain.Statements.exec;
 
@@ -52,7 +56,7 @@ public class MultiCloudWorkshop {
     public static final String WEB_SERVER_02 = MCW + "-webserver-02";
 
     private final ComputeService computeService;
-    private final Map<ProviderProperty, String> providerProps = newHashMap();
+    private final Map<ProviderProperty, String> providerProps;
 
     private final Logger logger = LoggerFactory.getLogger(MultiCloudWorkshop.class);
     private final Stopwatch timer;
@@ -63,12 +67,12 @@ public class MultiCloudWorkshop {
         try {
             multiCloudWorkshop = new MultiCloudWorkshop();
 
+            multiCloudWorkshop.setupKeyPair();
             Map<String, NodeMetadata> nameToNode = multiCloudWorkshop.createServers();
             multiCloudWorkshop.setupDatabase(nameToNode.get(DATABASE));
             multiCloudWorkshop.setupWebServers(getWebServers(nameToNode));
             multiCloudWorkshop.setupLoadBalancer(nameToNode.get(LOAD_BALANCER), getWebServers(nameToNode));
-//            multiCloudWorkshop.printResults(node);
-//            multiCloudWorkshop.deleteNodes();
+            multiCloudWorkshop.printResults(nameToNode);
         } catch (Throwable e) {
             e.printStackTrace();
         } finally {
@@ -80,9 +84,9 @@ public class MultiCloudWorkshop {
 
     public MultiCloudWorkshop() throws IOException {
         timer = Stopwatch.createStarted();
-        initializeProviderProperties();
+        providerProps = getProviderProperties();
 
-        logger.info(format("Multi-Cloud Workshop on %s", providerProps.get(NAME)));
+        logger.info(format("Multi-Cloud Workshop on %s", providerProps.get(PROVIDER).toUpperCase()));
 
         Iterable<Module> modules = ImmutableSet.<Module>of(
                 new SLF4JLoggingModule(),
@@ -101,11 +105,13 @@ public class MultiCloudWorkshop {
         computeService = context.getComputeService();
     }
 
-    private void initializeProviderProperties() throws IOException {
+    public static Map<ProviderProperty, String> getProviderProperties() throws IOException {
         Properties props = new Properties();
         props.load(newInputStreamSupplier(getResource("provider.properties")).getInput());
 
         String provider = props.getProperty(PROVIDER.toString());
+
+        Map<ProviderProperty, String> providerProps = newHashMap();
 
         providerProps.put(PROVIDER, provider);
         providerProps.put(NAME, props.getProperty(String.format("%s.%s", provider, NAME)));
@@ -114,35 +120,87 @@ public class MultiCloudWorkshop {
         providerProps.put(LOCATION, props.getProperty(format("%s.%s", provider, LOCATION)));
         providerProps.put(IMAGE, props.getProperty(format("%s.%s", provider, IMAGE)));
         providerProps.put(HARDWARE, props.getProperty(format("%s.%s", provider, HARDWARE)));
+
+        return providerProps;
+    }
+
+    private void setupKeyPair() throws IOException {
+        logger.info("Key pair setup started");
+
+        if (keyPairExists()) {
+            logger.info(format("  Key pair already exists: %s", MCW));
+            return;
+        }
+
+        String publicKey = Resources.toString(getResource(PUBLIC_KEY_FILENAME), Charsets.UTF_8);
+
+        if (providerProps.get(PROVIDER).equals("aws")) {
+            AWSEC2Api awsEc2Api = computeService.getContext().unwrapApi(AWSEC2Api.class);
+            AWSKeyPairApi awsKeyPairApi = awsEc2Api.getKeyPairApiForRegion(providerProps.get(LOCATION)).get();
+
+            awsKeyPairApi.importKeyPairInRegion(providerProps.get(LOCATION), MCW, publicKey);
+        } else {
+            RestContext<NovaApi, NovaAsyncApi> novaContext = computeService.getContext().unwrap();
+            NovaApi novaApi = novaContext.getApi();
+            KeyPairApi keyPairApi = novaApi.getKeyPairExtensionForZone(providerProps.get(LOCATION)).get();
+
+            keyPairApi.createWithPublicKey(MCW, publicKey);
+        }
+
+        logger.info(format("  Key pair created: %s", MCW));
+    }
+
+    private boolean keyPairExists() {
+        if (providerProps.get(PROVIDER).equals("aws")) {
+            AWSEC2Api awsEc2Api = computeService.getContext().unwrapApi(AWSEC2Api.class);
+            AWSKeyPairApi awsKeyPairApi = awsEc2Api.getKeyPairApiForRegion(providerProps.get(LOCATION)).get();
+
+            Set<org.jclouds.ec2.domain.KeyPair> keyPairs = awsKeyPairApi.describeKeyPairsInRegion(providerProps.get(LOCATION), MCW);
+
+            for (org.jclouds.ec2.domain.KeyPair keyPair : keyPairs) {
+                if (keyPair.getKeyName().equals(MCW)) {
+                    return true;
+                }
+            }
+
+            return false;
+        } else {
+            RestContext<NovaApi, NovaAsyncApi> novaContext = computeService.getContext().unwrap();
+            NovaApi novaApi = novaContext.getApi();
+            KeyPairApi keyPairApi = novaApi.getKeyPairExtensionForZone(providerProps.get(LOCATION)).get();
+
+            ImmutableSet<? extends KeyPair> keyPairs = keyPairApi.list().toSet();
+
+            for (KeyPair keyPair : keyPairs) {
+                if (keyPair.getName().equals(MCW)) {
+                    return true;
+                }
+            }
+
+            return false;
+        }
     }
 
     private Map<String, NodeMetadata> createServers() throws RunNodesException, IOException {
         Set<String> nodeNames = ImmutableSet.of(DATABASE, WEB_SERVER_01, WEB_SERVER_02, LOAD_BALANCER);
 
-        logger.info(format("Creating servers %s", Joiner.on(", ").join(nodeNames)));
-        logger.info("Check log/jclouds-wire.log for progress");
+        logger.info(format("Servers boot up started: %s", Joiner.on(", ").join(nodeNames)));
+        logger.info("  Check log/jclouds-wire.log for progress");
 
-        String publicKey = Resources.toString(getResource(PUBLIC_KEY_FILENAME), Charsets.UTF_8);
         String privateKey = Resources.toString(getResource(PRIVATE_KEY_FILENAME), Charsets.UTF_8);
 
         TemplateOptions options = computeService.templateOptions()
                 .nodeNames(nodeNames)
-                .authorizePublicKey(publicKey)
                 .overrideLoginPrivateKey(privateKey)
                 .inboundPorts(22, 80, 3000, 3306);
 
-
-//        if (providerProps.get(PROVIDER).equals("aws")) {
-//            options = AWSEC2TemplateOptions.Builder.nodeNames(nodeNames).keyPair(MCW).overrideLoginPrivateKey(privateKey).securityGroups(MCW);
-//        }
-//        else {
-//            options = NovaTemplateOptions.Builder.nodeNames(nodeNames).keyPairName(MCW).overrideLoginPrivateKey(privateKey).securityGroups(MCW);
-//        }
-
         String hardwareId = providerProps.get(HARDWARE);
 
-        if (!providerProps.get(PROVIDER).equals("aws")) {
+        if (providerProps.get(PROVIDER).equals("aws")) {
+            options = options.as(EC2TemplateOptions.class).keyPair(MCW);
+        } else {
             hardwareId = fromZoneAndId(providerProps.get(LOCATION), providerProps.get(HARDWARE)).slashEncode();
+            options = options.as(NovaTemplateOptions.class).keyPairName(MCW).generateKeyPair(false);
         }
 
         Template template = computeService.templateBuilder()
@@ -155,29 +213,28 @@ public class MultiCloudWorkshop {
         Set<? extends NodeMetadata> nodes = computeService.createNodesInGroup(MCW, 4, template);
         Map<String, NodeMetadata> nameToNode = newHashMap();
 
-        logger.info("Created servers:");
-        for (NodeMetadata node: nodes) {
-            String name = node.getName();
-            String publicIpAddress = getOnlyElement(node.getPublicAddresses());
-            String user = node.getCredentials().getUser();
-
-            logger.info(format("  %-40s ssh -i %s %s@%s", name, PRIVATE_KEY_FILENAME, user, publicIpAddress));
-
-//            nameToNode.put(name, node);
+        // This kludge is temporarily necessary because of bug https://issues.apache.org/jira/browse/JCLOUDS-467 :(
+        // All of your nodes will be named the same in AWS. This will be fixed in jclouds 1.7.2
+        if (providerProps.get(PROVIDER).equals("aws")) {
+            Iterator<? extends NodeMetadata> nodeIterator = nodes.iterator();
+            nameToNode.put(DATABASE, nodeIterator.next());
+            nameToNode.put(WEB_SERVER_01, nodeIterator.next());
+            nameToNode.put(WEB_SERVER_02, nodeIterator.next());
+            nameToNode.put(LOAD_BALANCER, nodeIterator.next());
+        } else {
+            for (NodeMetadata node : nodes) {
+                nameToNode.put(node.getName(), node);
+            }
         }
 
-        Iterator<? extends NodeMetadata> nodeIterator = nodes.iterator();
-        nameToNode.put(DATABASE, nodeIterator.next());
-        nameToNode.put(WEB_SERVER_01, nodeIterator.next());
-        nameToNode.put(WEB_SERVER_02, nodeIterator.next());
-        nameToNode.put(LOAD_BALANCER, nodeIterator.next());
+        logger.info("  Servers boot up completed");
 
         return nameToNode;
     }
 
     private void setupDatabase(NodeMetadata node) throws IOException {
-        logger.info(format("Database %s configuration started", node.getName()));
-        logger.info("Check log/jclouds-ssh.log for progress");
+        logger.info(format("Database setup started: %s", node.getName()));
+        logger.info("  Check log/jclouds-ssh.log for progress");
 
 
         RunScriptOptions options = RunScriptOptions.Builder
@@ -196,13 +253,13 @@ public class MultiCloudWorkshop {
 
         computeService.runScriptOnNode(node.getId(), script, options);
 
-        logger.info("Database configuration complete");
+        logger.info("  Database setup complete");
     }
 
     private void setupWebServers(List<NodeMetadata> webServerNodes) {
-        for (NodeMetadata node: webServerNodes) {
-            logger.info(format("Web server %s configuration started", node.getName()));
-            logger.info("Check log/jclouds-ssh.log for progress");
+        for (NodeMetadata node : webServerNodes) {
+            logger.info(format("Web server setup started: %s", node.getName()));
+            logger.info("  Check log/jclouds-ssh.log for progress");
 
             RunScriptOptions options = RunScriptOptions.Builder
                     .blockOnComplete(true);
@@ -217,14 +274,14 @@ public class MultiCloudWorkshop {
 
             computeService.runScriptOnNode(node.getId(), script, options);
 
-            logger.info("Web server configuration complete");
+            logger.info("  Web server setup complete");
         }
     }
 
     private static List<NodeMetadata> getWebServers(Map<String, NodeMetadata> nameToNode) {
         List<NodeMetadata> webServerNodes = newArrayList();
 
-        for (String name: nameToNode.keySet()) {
+        for (String name : nameToNode.keySet()) {
             if (name.contains("webserver")) {
                 webServerNodes.add(nameToNode.get(name));
             }
@@ -234,8 +291,8 @@ public class MultiCloudWorkshop {
     }
 
     private void setupLoadBalancer(NodeMetadata node, List<NodeMetadata> webServerNodes) {
-        logger.info(format("Load balancer %s configuration started", node.getName()));
-        logger.info("Check log/jclouds-ssh.log for progress");
+        logger.info(format("Load balancer setup started: %s", node.getName()));
+        logger.info("  Check log/jclouds-ssh.log for progress");
 
         RunScriptOptions options = RunScriptOptions.Builder
                 .blockOnComplete(true);
@@ -252,7 +309,7 @@ public class MultiCloudWorkshop {
 
         computeService.runScriptOnNode(node.getId(), script, options);
 
-        logger.info("Load balancer configuration complete");
+        logger.info("  Load balancer setup complete");
     }
 
     private String getLoadBalancerConfig(List<NodeMetadata> webServerNodes) {
@@ -286,50 +343,38 @@ public class MultiCloudWorkshop {
         configBuilder.append("        mode http\n");
         configBuilder.append("        balance roundrobin\n");
 
-        for (NodeMetadata webServerNode: webServerNodes) {
+        for (NodeMetadata webServerNode : webServerNodes) {
             configBuilder.append(format("        server %s %s\n", webServerNode.getName(), getOnlyElement(webServerNode.getPrivateAddresses())));
         }
 
         return configBuilder.toString();
     }
 
-    private void printResults(NodeMetadata node) throws IOException {
-        String publicAddress = node.getPublicAddresses().iterator().next();
-        String provider = computeService.getContext().toString().contains("rackspace") ? "Rackspace" : "HP";
+    private void printResults(Map<String, NodeMetadata> nameToNode) throws IOException {
+        NodeMetadata loadBalancerNode = nameToNode.get(LOAD_BALANCER);
 
-        System.out.println("Provider: " + provider);
+        logger.info(format("%nTo ssh into the individual servers: "));
 
-        if (node.getCredentials().getOptionalPrivateKey().isPresent()) {
-            Files.write(node.getCredentials().getPrivateKey(), new File("jclouds.pem"), UTF_8);
-            System.out.println("  Login: ssh -i jclouds.pem " + node.getCredentials().getUser() + "@" + publicAddress);
-        } else {
-            System.out.println("  Login: ssh " + node.getCredentials().getUser() + "@" + publicAddress);
-            System.out.println("  Password: " + node.getCredentials().getPassword());
+        String privateKeyFilePath = getResource(PRIVATE_KEY_FILENAME).getPath();
+
+        for (String name : nameToNode.keySet()) {
+            NodeMetadata node = nameToNode.get(name);
+            String publicIpAddress = getOnlyElement(node.getPublicAddresses());
+            String user = node.getCredentials().getUser();
+
+            logger.info(format("  %-36s ssh -i %s %s@%s", name, privateKeyFilePath, user, publicIpAddress));
+
+            nameToNode.put(name, node);
         }
 
-        System.out.println("  Go to http://" + publicAddress);
-    }
-
-    /**
-     * This will delete all servers in group "jclouds-workshop"
-     */
-    private void deleteNodes() {
-        System.out.println("Delete Nodes");
-
-        try {
-            Set<? extends NodeMetadata> servers = computeService.destroyNodesMatching(inGroup("jclouds-workshop"));
-
-            for (NodeMetadata nodeMetadata : servers) {
-                System.out.println("  " + nodeMetadata);
-            }
-        } catch (Throwable e) {
-            e.printStackTrace();
-        }
+        logger.info(format("%nGo to http://%s to test the application%n", getOnlyElement(loadBalancerNode.getPublicAddresses())));
     }
 
     private void close() {
         computeService.getContext().close();
-        logger.info(format("The code took %s to run", timer.stop()));
+
+        logger.info(format("The code took %s to run%n", timer.stop()));
+        logger.info("*** Please remember to DELETE YOUR SERVERS AND FLOATING IPs after the workshop to prevent unexpected charges! ***");
     }
 
     public enum ProviderProperty {
