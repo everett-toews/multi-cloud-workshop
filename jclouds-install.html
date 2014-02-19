@@ -41,110 +41,39 @@
     <div class="reveal">
 
       <!-- Any section element inside of this container is displayed as a slide -->
-      <div class="slides">
+      <div class="slides" style="height: 5000px">
         <section>
-          <h1>Cloud Portability</h1>
-          <h2>with Multi-Cloud Toolkits</h2>
-          <p>
-            <ul>
-              <li>Dana Bauer <a href="https://twitter.com/geography76">@geography76</a></li>
-              <li>Ken Perkins <a href="https://twitter.com/kenperkins">@kenperkins</a></li>
-              <li>Kyle Rames <a href="https://twitter.com/krames">@krames</a></li>
-              <li>Everett Toews <a href="https://twitter.com/everett_toews">@everett_toews</a></li>
-            </ul>
-          </p>
-        </section>
-
-        <section>
+          <h3>jclouds Requirements</h3>
           <ol>
-            <li>Cloud 101</li>
-            <li>Multi-Cloud 101</li>
-            <li>Multi-Cloud Toolkits</li>
-            <li>Break</li>
-            <li>Application Architecture</li>
-            <li>Application Code</li>
-            <li>Application Demonstrations (time permitting)</li>
-            <li>Conclusion</li>
+            <li>JDK 6+</li>
+            <li>Maven 3+</li>
           </ol>
         </section>
 
         <section>
-          <h1>Cloud 101</h1>
-        </section>
-
-        <section>
-          <img class="stretch" src="reveal.js/img/i-have-no-idea-what-im-doing.jpg">
-        </section>
-
-        <section>
-          <p>On-Demand</p>
-          <p>Self-Service</p>
-        </section>
-
-        <section>
-          <p>Broad</p>
-          <p>Network Access</p>
-        </section>
-
-        <section>
-          <p>Resource Pooling</p>
-        </section>
-
-        <section>
-          <p>Rapid Elasticity</p>
-        </section>
-
-        <section>
-          <p>Measured Service</p>
-        </section>
-
-        <section>
-          <p>Flavors</p>
-        </section>
-
-        <section>
-          <p>Software</p>
-          <p>as a Service</p>
-          <p>(SaaS)</p>
-        </section>
-
-        <section>
-          <p>Platform</p>
-          <p>as a Service</p>
-          <p>(PaaS)</p>
-        </section>
-
-        <section>
-          <p>Infrastructure</p>
-          <p>as a Service</p>
-          <p>(IaaS)</p>
-        </section>
-
-        <section>
-          <h1>Multi-Cloud Toolkit</h1>
-          <h1>Installation</h1>
-        </section>
-
-        <section>
-          <p>Choose your own adventure:</p>
+          <h3>jclouds Dependencies</h3>
           <ol>
-            <li><a href="jclouds-install.html">Java: Apache jclouds</a></li>
-            <li><a href="pkgcloud-install.html">Node.js: pkgcloud</a></li>
-            <li><a href="libcloud-install.html">Python: Apache libcloud</a></li>
-            <li><a href="fog-install.html">Ruby: Fog</a></li>
+            <li><code>mkdir jclouds-workshop</code></li>
+            <li><code>cd jclouds-workshop</code></li>
+            <li>Create a pom.xml file and open it</li>
           </ol>
         </section>
 
         <section>
-          <h1>Multi-Cloud</h1>
+          <h3>jclouds Dependencies</h3>
+          <script src="http://gist-it.appspot.com/github/rackerlabs/multi-cloud-workshop/blob/gh-pages/jclouds/pom.xml?footer=minimal"></script>
         </section>
 
         <section>
-          <p>Buncha stuff about multi-cloud</p>
+          <h3>jclouds Dependencies</h3>
+          <pre><code data-trim>
+$ mvn dependency:copy-dependencies "-DoutputDirectory=./lib"
+$ ls lib/
+          </code></pre>
         </section>
 
         <section>
-          <p>THE END</p>
+          <p><a href="index.html#/15">Back to the Presentation</a></p>
         </section>
 
       </div>
