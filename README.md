@@ -1,4 +1,6 @@
-SXSW 2014 Workshop
-==================
+Multi-Cloud Workshop
+====================
 
-Code for the SXSW 2014 Cloud Portability With Multi-Cloud Toolkits workshop
+Code and presentation for the Cloud Portability With Multi-Cloud Toolkits workshop.
+
+See http://rackerlabs.github.io/multi-cloud-workshop/presentation/
