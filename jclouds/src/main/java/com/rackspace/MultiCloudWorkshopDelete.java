@@ -40,9 +40,12 @@ import static java.lang.String.format;
 import static org.jclouds.compute.config.ComputeServiceProperties.POLL_INITIAL_PERIOD;
 import static org.jclouds.compute.config.ComputeServiceProperties.POLL_MAX_PERIOD;
 
+/**
+ * Delete all of the resources created in the MultiCloudWorkshop class.
+ */
 public class MultiCloudWorkshopDelete {
     private final ComputeService computeService;
-    private final Map<ProviderProperty, String> providerProps;
+    private final Map<ProviderProperty, String> props;
 
     private final Logger logger = LoggerFactory.getLogger(MultiCloudWorkshopDelete.class);
     private final Stopwatch timer;
@@ -66,9 +69,9 @@ public class MultiCloudWorkshopDelete {
 
     public MultiCloudWorkshopDelete() throws IOException {
         timer = Stopwatch.createStarted();
-        providerProps = MultiCloudWorkshop.getProviderProperties();
+        props = MultiCloudWorkshop.getProviderProperties();
 
-        logger.info(format("Multi-Cloud Workshop Delete on %s", providerProps.get(PROVIDER).toUpperCase()));
+        logger.info(format("Multi-Cloud Workshop Delete on %s", props.get(PROVIDER).toUpperCase()));
         logger.info("  Check log/jclouds-wire.log for progress");
 
         Iterable<Module> modules = ImmutableSet.<Module>of(
@@ -79,8 +82,8 @@ public class MultiCloudWorkshopDelete {
         overrides.setProperty(POLL_INITIAL_PERIOD, "30000");
         overrides.setProperty(POLL_MAX_PERIOD, "30000");
 
-        ComputeServiceContext context = ContextBuilder.newBuilder(providerProps.get(NAME))
-                .credentials(providerProps.get(IDENTITY), providerProps.get(CREDENTIAL))
+        ComputeServiceContext context = ContextBuilder.newBuilder(props.get(NAME))
+                .credentials(props.get(IDENTITY), props.get(CREDENTIAL))
                 .modules(modules)
                 .overrides(overrides)
                 .buildView(ComputeServiceContext.class);
@@ -90,22 +93,22 @@ public class MultiCloudWorkshopDelete {
     private void deleteKeyPairs() {
         logger.info("  Deleted Key Pairs:");
 
-        if (providerProps.get(PROVIDER).equals("aws")) {
+        if (props.get(PROVIDER).equals("aws")) {
             AWSEC2Api awsEc2Api = computeService.getContext().unwrapApi(AWSEC2Api.class);
-            AWSKeyPairApi awsKeyPairApi = awsEc2Api.getKeyPairApiForRegion(providerProps.get(LOCATION)).get();
+            AWSKeyPairApi awsKeyPairApi = awsEc2Api.getKeyPairApiForRegion(props.get(LOCATION)).get();
 
-            Set<org.jclouds.ec2.domain.KeyPair> keyPairs = awsKeyPairApi.describeKeyPairsInRegion(providerProps.get(LOCATION), MCW);
+            Set<org.jclouds.ec2.domain.KeyPair> keyPairs = awsKeyPairApi.describeKeyPairsInRegion(props.get(LOCATION), MCW);
 
             for (org.jclouds.ec2.domain.KeyPair keyPair : keyPairs) {
                 if (keyPair.getKeyName().contains(MCW)) {
-                    awsKeyPairApi.deleteKeyPairInRegion(providerProps.get(LOCATION), keyPair.getKeyName());
+                    awsKeyPairApi.deleteKeyPairInRegion(props.get(LOCATION), keyPair.getKeyName());
                     logger.info(format("    %s", keyPair.getKeyName()));
                 }
             }
         } else {
             RestContext<NovaApi, NovaAsyncApi> novaContext = computeService.getContext().unwrap();
             NovaApi novaApi = novaContext.getApi();
-            KeyPairApi keyPairApi = novaApi.getKeyPairExtensionForZone(providerProps.get(LOCATION)).get();
+            KeyPairApi keyPairApi = novaApi.getKeyPairExtensionForZone(props.get(LOCATION)).get();
 
             ImmutableSet<? extends KeyPair> keyPairs = keyPairApi.list().toSet();
 
@@ -119,7 +122,7 @@ public class MultiCloudWorkshopDelete {
     }
 
     private void deleteSecurityGroups() {
-        if (!providerProps.get(PROVIDER).equals("rackspace")) {
+        if (!props.get(PROVIDER).equals("rackspace")) {
             logger.info("  Deleted Security Groups:");
 
             SecurityGroupExtension securityGroupExtension = computeService.getSecurityGroupExtension().get();
@@ -142,11 +145,11 @@ public class MultiCloudWorkshopDelete {
         try {
             Set<? extends NodeMetadata> nodes = computeService.listNodesDetailsMatching(nameContains(MCW));
 
-            if (providerProps.get(PROVIDER).equals("hp")) {
+            if (props.get(PROVIDER).equals("hp")) {
                 RestContext<NovaApi, NovaAsyncApi> novaContext = computeService.getContext().unwrap();
                 NovaApi novaApi = novaContext.getApi();
 
-                Optional<? extends FloatingIPApi> floatingIPApiOptional = novaApi.getFloatingIPExtensionForZone(providerProps.get(LOCATION));
+                Optional<? extends FloatingIPApi> floatingIPApiOptional = novaApi.getFloatingIPExtensionForZone(props.get(LOCATION));
 
                 if (floatingIPApiOptional.isPresent()) {
 

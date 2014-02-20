@@ -12,7 +12,6 @@ import org.jclouds.aws.ec2.features.AWSKeyPairApi;
 import org.jclouds.compute.ComputeService;
 import org.jclouds.compute.ComputeServiceContext;
 import org.jclouds.compute.RunNodesException;
-import org.jclouds.compute.config.ComputeServiceProperties;
 import org.jclouds.compute.domain.NodeMetadata;
 import org.jclouds.compute.domain.Template;
 import org.jclouds.compute.options.RunScriptOptions;
@@ -43,9 +42,20 @@ import static com.rackspace.MultiCloudWorkshop.ProviderProperty.*;
 import static java.lang.String.format;
 import static org.jclouds.compute.config.ComputeServiceProperties.POLL_INITIAL_PERIOD;
 import static org.jclouds.compute.config.ComputeServiceProperties.POLL_MAX_PERIOD;
+import static org.jclouds.compute.config.ComputeServiceProperties.TIMEOUT_SCRIPT_COMPLETE;
 import static org.jclouds.openstack.nova.v2_0.domain.zonescoped.ZoneAndId.fromZoneAndId;
 import static org.jclouds.scriptbuilder.domain.Statements.exec;
 
+/**
+ * This class creates a load balancer, 2 web servers, and a database. It then
+ * uses ssh commands to wire them together to create a working application
+ * architecture.
+ *
+ * You'll find the following files in the resource directory:
+ *   provider.properties      - configure your cloud resources
+ *   logback.xml              - configure your logging
+ *   multi-cloud-workshop.key - all servers are accessible via ssh using this key
+ */
 public class MultiCloudWorkshop {
     public static final String MCW = "multi-cloud-workshop";
     public static final String PUBLIC_KEY_FILENAME = MCW + ".pub";
@@ -56,11 +66,20 @@ public class MultiCloudWorkshop {
     public static final String WEB_SERVER_02 = MCW + "-webserver-02";
 
     private final ComputeService computeService;
-    private final Map<ProviderProperty, String> providerProps;
+    private final Map<ProviderProperty, String> props;
 
     private final Logger logger = LoggerFactory.getLogger(MultiCloudWorkshop.class);
     private final Stopwatch timer;
 
+    /**
+     * Do the following to build an application architecture:
+     *   1. Setup a key pair for remote access to servers.
+     *   2. Create 4 servers.
+     *   3. Setup 1 server as a database.
+     *   4. Setup 2 servers as web servers.
+     *   5. Setup 1 server as a load balancer.
+     *   6. Print out the results.
+     */
     public static void main(String[] args) {
         MultiCloudWorkshop multiCloudWorkshop = null;
 
@@ -82,11 +101,20 @@ public class MultiCloudWorkshop {
         }
     }
 
+    /**
+     * Initialize the following resources:
+     *   1. A timer for timing how long it took to execute the class.
+     *   2. The cloud properties for configuration.
+     *   3. Modules for logging and ssh.
+     *   4. Overrides to increase how often jclouds polls for server status and
+     *      how long it waits for ssh to timeout.
+     *   5. The ComputeService abstract layer for working with clouds.
+     */
     public MultiCloudWorkshop() throws IOException {
         timer = Stopwatch.createStarted();
-        providerProps = getProviderProperties();
+        props = getProviderProperties();
 
-        logger.info(format("Multi-Cloud Workshop on %s", providerProps.get(PROVIDER).toUpperCase()));
+        logger.info(format("Multi-Cloud Workshop on %s", props.get(PROVIDER).toUpperCase()));
 
         Iterable<Module> modules = ImmutableSet.<Module>of(
                 new SLF4JLoggingModule(),
@@ -95,16 +123,19 @@ public class MultiCloudWorkshop {
         Properties overrides = new Properties();
         overrides.setProperty(POLL_INITIAL_PERIOD, "30000");
         overrides.setProperty(POLL_MAX_PERIOD, "30000");
-        overrides.setProperty(ComputeServiceProperties.TIMEOUT_SCRIPT_COMPLETE, "1200000");
+        overrides.setProperty(TIMEOUT_SCRIPT_COMPLETE, "1200000");
 
-        ComputeServiceContext context = ContextBuilder.newBuilder(providerProps.get(NAME))
-                .credentials(providerProps.get(IDENTITY), providerProps.get(CREDENTIAL))
+        ComputeServiceContext context = ContextBuilder.newBuilder(props.get(NAME))
+                .credentials(props.get(IDENTITY), props.get(CREDENTIAL))
                 .modules(modules)
                 .overrides(overrides)
                 .buildView(ComputeServiceContext.class);
         computeService = context.getComputeService();
     }
 
+    /**
+     * Load the cloud configuration properties.
+     */
     public static Map<ProviderProperty, String> getProviderProperties() throws IOException {
         Properties props = new Properties();
         props.load(newInputStreamSupplier(getResource("provider.properties")).getInput());
@@ -124,6 +155,10 @@ public class MultiCloudWorkshop {
         return providerProps;
     }
 
+    /**
+     * Put the multi-cloud-workshop.pub public key in the cloud so we can login
+     * to the servers using the multi-cloud-workshop.key private key.
+     */
     private void setupKeyPair() throws IOException {
         logger.info("Key pair setup started");
 
@@ -134,15 +169,15 @@ public class MultiCloudWorkshop {
 
         String publicKey = Resources.toString(getResource(PUBLIC_KEY_FILENAME), Charsets.UTF_8);
 
-        if (providerProps.get(PROVIDER).equals("aws")) {
+        if (props.get(PROVIDER).equals("aws")) {
             AWSEC2Api awsEc2Api = computeService.getContext().unwrapApi(AWSEC2Api.class);
-            AWSKeyPairApi awsKeyPairApi = awsEc2Api.getKeyPairApiForRegion(providerProps.get(LOCATION)).get();
+            AWSKeyPairApi awsKeyPairApi = awsEc2Api.getKeyPairApiForRegion(props.get(LOCATION)).get();
 
-            awsKeyPairApi.importKeyPairInRegion(providerProps.get(LOCATION), MCW, publicKey);
+            awsKeyPairApi.importKeyPairInRegion(props.get(LOCATION), MCW, publicKey);
         } else {
             RestContext<NovaApi, NovaAsyncApi> novaContext = computeService.getContext().unwrap();
             NovaApi novaApi = novaContext.getApi();
-            KeyPairApi keyPairApi = novaApi.getKeyPairExtensionForZone(providerProps.get(LOCATION)).get();
+            KeyPairApi keyPairApi = novaApi.getKeyPairExtensionForZone(props.get(LOCATION)).get();
 
             keyPairApi.createWithPublicKey(MCW, publicKey);
         }
@@ -150,12 +185,15 @@ public class MultiCloudWorkshop {
         logger.info(format("  Key pair created: %s", MCW));
     }
 
+    /**
+     * Determine if the multi-cloud-workshop.pub public key is already in the cloud.
+     */
     private boolean keyPairExists() {
-        if (providerProps.get(PROVIDER).equals("aws")) {
+        if (props.get(PROVIDER).equals("aws")) {
             AWSEC2Api awsEc2Api = computeService.getContext().unwrapApi(AWSEC2Api.class);
-            AWSKeyPairApi awsKeyPairApi = awsEc2Api.getKeyPairApiForRegion(providerProps.get(LOCATION)).get();
+            AWSKeyPairApi awsKeyPairApi = awsEc2Api.getKeyPairApiForRegion(props.get(LOCATION)).get();
 
-            Set<org.jclouds.ec2.domain.KeyPair> keyPairs = awsKeyPairApi.describeKeyPairsInRegion(providerProps.get(LOCATION), MCW);
+            Set<org.jclouds.ec2.domain.KeyPair> keyPairs = awsKeyPairApi.describeKeyPairsInRegion(props.get(LOCATION), MCW);
 
             for (org.jclouds.ec2.domain.KeyPair keyPair : keyPairs) {
                 if (keyPair.getKeyName().equals(MCW)) {
@@ -167,7 +205,7 @@ public class MultiCloudWorkshop {
         } else {
             RestContext<NovaApi, NovaAsyncApi> novaContext = computeService.getContext().unwrap();
             NovaApi novaApi = novaContext.getApi();
-            KeyPairApi keyPairApi = novaApi.getKeyPairExtensionForZone(providerProps.get(LOCATION)).get();
+            KeyPairApi keyPairApi = novaApi.getKeyPairExtensionForZone(props.get(LOCATION)).get();
 
             ImmutableSet<? extends KeyPair> keyPairs = keyPairApi.list().toSet();
 
@@ -181,6 +219,14 @@ public class MultiCloudWorkshop {
         }
     }
 
+    /**
+     * Create 4 servers simultaneously with the options:
+     *   1. Assign names to the nodes.
+     *   2. Assign the public key multi-cloud-workshop.key.
+     *   3. Use the private key multi-cloud-workshop.key to login.
+     *   4. Open up ports 22, 80, 3000, 3306 for our application to use.
+     *   5. Assign the hardware, image, and location based on the configuration.
+     */
     private Map<String, NodeMetadata> createServers() throws RunNodesException, IOException {
         Set<String> nodeNames = ImmutableSet.of(DATABASE, WEB_SERVER_01, WEB_SERVER_02, LOAD_BALANCER);
 
@@ -194,18 +240,18 @@ public class MultiCloudWorkshop {
                 .overrideLoginPrivateKey(privateKey)
                 .inboundPorts(22, 80, 3000, 3306);
 
-        String hardwareId = providerProps.get(HARDWARE);
+        String hardwareId = props.get(HARDWARE);
 
-        if (providerProps.get(PROVIDER).equals("aws")) {
+        if (props.get(PROVIDER).equals("aws")) {
             options = options.as(EC2TemplateOptions.class).keyPair(MCW);
         } else {
-            hardwareId = fromZoneAndId(providerProps.get(LOCATION), providerProps.get(HARDWARE)).slashEncode();
+            hardwareId = fromZoneAndId(props.get(LOCATION), props.get(HARDWARE)).slashEncode();
             options = options.as(NovaTemplateOptions.class).keyPairName(MCW).generateKeyPair(false);
         }
 
         Template template = computeService.templateBuilder()
-                .imageNameMatches(providerProps.get(IMAGE))
-                .locationId(providerProps.get(LOCATION))
+                .imageNameMatches(props.get(IMAGE))
+                .locationId(props.get(LOCATION))
                 .hardwareId(hardwareId)
                 .options(options)
                 .build();
@@ -215,7 +261,7 @@ public class MultiCloudWorkshop {
 
         // This kludge is temporarily necessary because of bug https://issues.apache.org/jira/browse/JCLOUDS-467 :(
         // All of your nodes will be named the same in AWS. This will be fixed in jclouds 1.7.2
-        if (providerProps.get(PROVIDER).equals("aws")) {
+        if (props.get(PROVIDER).equals("aws")) {
             Iterator<? extends NodeMetadata> nodeIterator = nodes.iterator();
             nameToNode.put(DATABASE, nodeIterator.next());
             nameToNode.put(WEB_SERVER_01, nodeIterator.next());
@@ -232,10 +278,12 @@ public class MultiCloudWorkshop {
         return nameToNode;
     }
 
+    /**
+     * Run the ssh commands necessary to setup node as a database.
+     */
     private void setupDatabase(NodeMetadata node) throws IOException {
         logger.info(format("Database setup started: %s", node.getName()));
         logger.info("  Check log/jclouds-ssh.log for progress");
-
 
         RunScriptOptions options = RunScriptOptions.Builder
                 .blockOnComplete(true);
@@ -256,6 +304,9 @@ public class MultiCloudWorkshop {
         logger.info("  Database setup complete");
     }
 
+    /**
+     * Run the ssh commands necessary to setup the nodes as web servers.
+     */
     private void setupWebServers(List<NodeMetadata> webServerNodes) {
         for (NodeMetadata node : webServerNodes) {
             logger.info(format("Web server setup started: %s", node.getName()));
@@ -278,6 +329,9 @@ public class MultiCloudWorkshop {
         }
     }
 
+    /**
+     * Get the web servers out of the servers that are running.
+     */
     private static List<NodeMetadata> getWebServers(Map<String, NodeMetadata> nameToNode) {
         List<NodeMetadata> webServerNodes = newArrayList();
 
@@ -290,7 +344,10 @@ public class MultiCloudWorkshop {
         return webServerNodes;
     }
 
-    private void setupLoadBalancer(NodeMetadata node, List<NodeMetadata> webServerNodes) {
+    /**
+     * Run the ssh command necessary to setup the node as a load balancer.
+     */
+    private void setupLoadBalancer(NodeMetadata node, List<NodeMetadata> webServerNodes) throws IOException {
         logger.info(format("Load balancer setup started: %s", node.getName()));
         logger.info("  Check log/jclouds-ssh.log for progress");
 
@@ -312,36 +369,12 @@ public class MultiCloudWorkshop {
         logger.info("  Load balancer setup complete");
     }
 
-    private String getLoadBalancerConfig(List<NodeMetadata> webServerNodes) {
-        StringBuilder configBuilder = new StringBuilder();
-        configBuilder.append("global\n");
-        configBuilder.append("        log 127.0.0.1   local0\n");
-        configBuilder.append("        log 127.0.0.1   local1 notice\n");
-        configBuilder.append("        #log loghost    local0 info\n");
-        configBuilder.append("        maxconn 4096\n");
-        configBuilder.append("        #chroot /usr/share/haproxy\n");
-        configBuilder.append("        user haproxy\n");
-        configBuilder.append("        group haproxy\n");
-        configBuilder.append("        daemon\n");
-        configBuilder.append("        #debug\n");
-        configBuilder.append("        #quiet\n");
-        configBuilder.append("        stats socket /tmp/haproxy\n");
-        configBuilder.append("\n");
-        configBuilder.append("defaults\n");
-        configBuilder.append("        log global\n");
-        configBuilder.append("        mode http\n");
-        configBuilder.append("        option httplog\n");
-        configBuilder.append("        option dontlognull\n");
-        configBuilder.append("        retries 3\n");
-        configBuilder.append("        option redispatch\n");
-        configBuilder.append("        maxconn 2000\n");
-        configBuilder.append("        contimeout 5000\n");
-        configBuilder.append("        clitimeout 50000\n");
-        configBuilder.append("        srvtimeout 50000\n");
-        configBuilder.append("\n");
-        configBuilder.append("listen  web-proxy 0.0.0.0:80\n");
-        configBuilder.append("        mode http\n");
-        configBuilder.append("        balance roundrobin\n");
+    /**
+     * Get the load balancer configuration file.
+     */
+    private String getLoadBalancerConfig(List<NodeMetadata> webServerNodes) throws IOException {
+        String haproxyCfg = Resources.toString(getResource("haproxy.cfg"), Charsets.UTF_8);
+        StringBuilder configBuilder = new StringBuilder(haproxyCfg);
 
         for (NodeMetadata webServerNode : webServerNodes) {
             configBuilder.append(format("        server %s %s\n", webServerNode.getName(), getOnlyElement(webServerNode.getPrivateAddresses())));
@@ -350,6 +383,9 @@ public class MultiCloudWorkshop {
         return configBuilder.toString();
     }
 
+    /**
+     * Print the results.
+     */
     private void printResults(Map<String, NodeMetadata> nameToNode) throws IOException {
         NodeMetadata loadBalancerNode = nameToNode.get(LOAD_BALANCER);
 
@@ -370,6 +406,9 @@ public class MultiCloudWorkshop {
         logger.info(format("%nGo to http://%s to test the application%n", getOnlyElement(loadBalancerNode.getPublicAddresses())));
     }
 
+    /**
+     * Close the resources.
+     */
     private void close() {
         computeService.getContext().close();
 
@@ -377,6 +416,9 @@ public class MultiCloudWorkshop {
         logger.info("*** Please remember to DELETE YOUR SERVERS AND FLOATING IPs after the workshop to prevent unexpected charges! ***");
     }
 
+    /**
+     * An Enum for cloud configuration properties.
+     */
     public enum ProviderProperty {
         PROVIDER("provider"),
         NAME("name"),
