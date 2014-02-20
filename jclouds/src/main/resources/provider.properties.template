@@ -1,0 +1,25 @@
+# Change the provider property to match the prefix of one of the clouds below
+# Update the identity and credential for the cloud you want to use
+
+provider=rackspace
+
+rackspace.name=rackspace-cloudservers-us
+rackspace.identity=myRackspaceUsername
+rackspace.credential=myRackspaceApiKey
+rackspace.location=IAD
+rackspace.image=Ubuntu 12.04 LTS \\(Precise Pangolin\\)$
+rackspace.hardware=performance1-1
+
+hp.name=hpcloud-compute
+hp.identity=myHpTenantName:myHpUsername
+hp.credential=myHpPassword
+hp.location=az-1.region-a.geo-1
+hp.image=Ubuntu Precise 12.04 LTS Server 64-bit 20121026
+hp.hardware=100
+
+aws.name=aws-ec2
+aws.identity=myAwsAccessKeyId
+aws.credential=myAwsSecretAccessKey
+aws.location=us-west-2
+aws.image=ubuntu/images/ubuntu-precise-12.04-amd64-server-20131003
+aws.hardware=m1.small
