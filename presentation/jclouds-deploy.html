@@ -55,8 +55,9 @@
         <section>
           <h2>Compile and Run</h2>
           <pre><code data-trim>
-$ javac -classpath "src/main/java/:src/main/resources/:lib/*" src/main/java/com/rackspace/*.java
-$ java -classpath "src/main/java/:src/main/resources/:lib/*" com.rackspace.MultiCloudWorkshop
+# Replace : with ; on Windows
+$ javac -classpath "lib/*:src/main/java/:src/main/resources/" src/main/java/com/rackspace/*.java
+$ java -classpath "lib/*:src/main/java/:src/main/resources/" com.rackspace.MultiCloudWorkshop
           </code></pre>
         </section>
 
@@ -98,7 +99,7 @@ $ java -classpath "src/main/java/:src/main/resources/:lib/*" com.rackspace.Multi
         <section>
           <h2>Security Groups</h2>
           <div class="gist-it">
-            <script src="http://gist-it.appspot.com/github/rackerlabs/multi-cloud-workshop/blob/gh-pages/jclouds/src/main/java/com/rackspace/MultiCloudWorkshop.java?footer=minimal&slice=157:219"></script>
+            <script src="http://gist-it.appspot.com/github/rackerlabs/multi-cloud-workshop/blob/gh-pages/jclouds/src/main/java/com/rackspace/MultiCloudWorkshop.java?footer=minimal&slice=240"></script>
           </div>
         </section>
 
@@ -140,7 +141,8 @@ $ java -classpath "src/main/java/:src/main/resources/:lib/*" com.rackspace.Multi
                 <section>
           <h2>Delete Resources</h2>
           <pre><code data-trim>
-$ java -classpath "src/main/java/:src/main/resources/:lib/*" com.rackspace.MultiCloudWorkshop
+# Replace : with ; on Windows
+$ java -classpath "lib/*:src/main/java/:src/main/resources/" com.rackspace.MultiCloudWorkshopDelete
           </code></pre>
         </section>
 
