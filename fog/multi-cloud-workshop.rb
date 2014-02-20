@@ -1,6 +1,8 @@
 require 'fog'
 
 @config = {}
+
+# Set the approprate configuration environment variables variables
 @config[:rackspace] = {
   :service_opts => {
     :provider => 'rackspace',
@@ -22,9 +24,10 @@ require 'fog'
   },
   :server_opts => {
     :username => 'ubuntu',
-    :groups => ['sxsw-demo']
+    :groups => ['multi-cloud-workshop']
   },
-  :flavor_name => 'Medium Instance', #'Micro Instance',
+  # :flavor_name => 'Medium Instance', #'Micro Instance',
+  :flavor_name => 'm1.small', #'Micro Instance',
   :image_name => 'ubuntu-precise-12.04-amd64-server-20131003'
 }
 @config[:hp] = {
@@ -38,7 +41,7 @@ require 'fog'
   },
   :server_opts => {
     :username => 'ubuntu',
-    :security_groups => ['sxsw-demo']
+    :security_groups => ['multi-cloud-workshop']
   },
   :flavor_name => 'standard.xsmall',
   :image_name => 'Ubuntu Precise 12.04 LTS Server 64-bit 20121026'
@@ -49,7 +52,8 @@ def config
 end
 
 def provider
-  :hp
+  raise "Please set PROVIDER environment variable" unless ENV['PROVIDER']
+  @provider ||= ENV['PROVIDER'].to_sym
 end
 
 def flavor
@@ -72,8 +76,8 @@ def create_server(name)
     :name => name,
     :flavor_id => flavor.id,
     :image_id => image.id,
-    :private_key_path => 'sxsw_rsa',
-    :key_name => 'sxsw-demo'
+    :private_key_path => 'multi-cloud-workshop.key',
+    :key_name => 'multi-cloud-workshop'
   })
   
   server = service.servers.create server_config
@@ -207,29 +211,29 @@ def carrierwave_config
   %Q[
     CarrierWave.configure do |config|
       config.fog_credentials = #{config[:service_opts].to_s}
-      config.fog_directory  = "sxsw-demo"
+      config.fog_directory  = "multi-cloud-workshop"
     end
     ]
 end
 
 def setup_object_storage
   storage = Fog::Storage.new config[:service_opts]
-  dir = storage.directories.get 'sxsw-demo'
+  dir = storage.directories.get 'multi-cloud-workshop'
   unless dir
-    storage.directories.create :key => 'sxsw-demo', :public => true
+    storage.directories.create :key => 'multi-cloud-workshop', :public => true
   end
 end
 
 def security_group_exist?
-  group = service.security_groups.find {|group| group.name == 'sxsw-demo' } != nil
+  group = service.security_groups.find {|group| group.name == 'multi-cloud-workshop' } != nil
 end
 
 def setup_hp_security_group
   network_service = Fog::HP::Network.new config[:service_opts]
-  return if network_service.security_groups.find {|group| group.name == 'sxsw-demo' }
+  return if network_service.security_groups.find {|group| group.name == 'multi-cloud-workshop' }
 
-  puts "[security group] Creating security group sxsw-demo"
-  group = network_service.security_groups.create :name => 'sxsw-demo',
+  puts "[security group] Creating security group multi-cloud-workshop"
+  group = network_service.security_groups.create :name => 'multi-cloud-workshop',
     :description => 'This group was created for the SXSW Cloud Portability with Multi-Cloud Toolkits workshop'
 
   [80, 22, 3000, 3306].each do |port|
@@ -243,10 +247,10 @@ def setup_hp_security_group
 end
 
 def setup_aws_security_group
-  return if service.security_groups.find {|group| group.name == 'sxsw-demo' }
-  puts "[security group] Creating security group sxsw-demo"
+  return if service.security_groups.find {|group| group.name == 'multi-cloud-workshop' }
+  puts "[security group] Creating security group multi-cloud-workshop"
   
-  group = service.security_groups.create :name => 'sxsw-demo', :description => 'This group was created for the SXSW Cloud Portability with Multi-Cloud Toolkits workshop'
+  group = service.security_groups.create :name => 'multi-cloud-workshop', :description => 'This group was created for the SXSW Cloud Portability with Multi-Cloud Toolkits workshop'
   [80, 22, 3000, 3306].each do |port|
     group.authorize_port_range port..port, :ip_protocol => 'tcp'
   end
@@ -259,44 +263,48 @@ def setup_security_group
 end
 
 def key_pair_exist?
-  service.key_pairs.get('sxsw-demo') != nil
+  service.key_pairs.get('multi-cloud-workshop') != nil
 end
 
 def setup_key_pair
   return if key_pair_exist?
-  puts "[key pair] creating key pair sxsw-demo"
+  puts "[key pair] creating key pair multi-cloud-workshop"
   
-  service.key_pairs.create :name => 'sxsw-demo', 
-    :public_key => File.read('sxsw_rsa.pub'),
-    :private_key => File.read('sxsw_rsa')
+  service.key_pairs.create :name => 'multi-cloud-workshop', 
+    :public_key => File.read('multi-cloud-workshop.pub'),
+    :private_key => File.read('multi-cloud-workshop.key')
 end
 
-puts "\n*** BUILDING SYSTEM USING #{provider.to_s.upcase} ***\n\n"
+def build_environment
+  puts "\n*** BUILDING SYSTEM USING #{provider.to_s.upcase} ***\n\n"
 
-setup_security_group
-setup_key_pair
-setup_object_storage
+  setup_security_group
+  setup_key_pair
+  setup_object_storage
 
-db_server = create_server('sxsw-db')
-web_server = create_server('sxsw-web')
-haproxy_server = create_server('sxsw-haproxy')
+  db_server = create_server('sxsw-db')
+  web_server = create_server('sxsw-web')
+  haproxy_server = create_server('sxsw-haproxy')
 
-db_server.wait_for { ready? && sshable?}
-setup_db_server(db_server)
+  db_server.wait_for { ready? && sshable?}
+  setup_db_server(db_server)
 
-web_server.wait_for { ready?  && sshable? }
-setup_webhead(web_server, db_server)
+  web_server.wait_for { ready?  && sshable? }
+  setup_webhead(web_server, db_server)
 
-haproxy_server.wait_for { ready?  && sshable? }
-setup_haproxy(haproxy_server, web_server)
+  haproxy_server.wait_for { ready?  && sshable? }
+  setup_haproxy(haproxy_server, web_server)
 
-puts "\nThe system should be successfully provisioned. You can access it at http://#{haproxy_server.public_ip_address}\n\n"
-puts "ssh access individual servers:\n"
-puts "\t[sxsw-db]      ssh -i #{db_server.private_key_path} #{db_server.username}@#{db_server.public_ip_address}\n"
-puts "\t[sxsw-web]     ssh -i #{web_server.private_key_path} #{web_server.username}@#{web_server.public_ip_address}\n"
-puts "\t[sxsw-haproxy] ssh -i #{haproxy_server.private_key_path} #{haproxy_server.username}@#{haproxy_server.public_ip_address}\n"
+  puts "\nThe system should be successfully provisioned. You can access it at http://#{haproxy_server.public_ip_address}\n\n"
+  puts "ssh access individual servers:\n"
+  puts "\t[sxsw-db]      ssh -i #{db_server.private_key_path} #{db_server.username}@#{db_server.public_ip_address}\n"
+  puts "\t[sxsw-web]     ssh -i #{web_server.private_key_path} #{web_server.username}@#{web_server.public_ip_address}\n"
+  puts "\t[sxsw-haproxy] ssh -i #{haproxy_server.private_key_path} #{haproxy_server.username}@#{haproxy_server.public_ip_address}\n"
 
-puts "\n*** PLEASE REMEMBER TO DELETE YOUR SERVERS AND FILES AFTER THE WORKSHOP TO PREVENT UNEXPECTED CHARGES! ***\n\n"
+  puts "\n*** PLEASE REMEMBER TO DELETE YOUR SERVERS AND FILES AFTER THE WORKSHOP TO PREVENT UNEXPECTED CHARGES! ***\n\n"
+end
+
+build_environment
 
 
 
