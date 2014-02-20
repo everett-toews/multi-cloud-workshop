@@ -15,7 +15,8 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
 
     <link rel="stylesheet" href="reveal.js/css/reveal.min.css">
-    <link rel="stylesheet" href="reveal.js/css/theme/default.css" id="theme">
+    <link rel="stylesheet" href="reveal.js/css/theme/simple.css" id="theme">
+    <link rel="stylesheet" href="reveal.js/css/multi-cloud-workshop.css" id="theme">
 
     <!-- For syntax highlighting -->
     <link rel="stylesheet" href="reveal.js/lib/css/zenburn.css">
@@ -28,12 +29,6 @@
     <!--[if lt IE 9]>
     <script src="reveal.js/lib/js/html5shiv.js"></script>
     <![endif]-->
-
-    <style>
-      p {
-        font-size: 64px;
-      }
-    </style>
   </head>
 
   <body>
@@ -45,106 +40,379 @@
         <section>
           <h1>Cloud Portability</h1>
           <h2>with Multi-Cloud Toolkits</h2>
-          <p>
-            <ul>
-              <li>Dana Bauer <a href="https://twitter.com/geography76">@geography76</a></li>
-              <li>Ken Perkins <a href="https://twitter.com/kenperkins">@kenperkins</a></li>
-              <li>Kyle Rames <a href="https://twitter.com/krames">@krames</a></li>
-              <li>Everett Toews <a href="https://twitter.com/everett_toews">@everett_toews</a></li>
-            </ul>
-          </p>
+          <center>
+            <table>
+              <tbody>
+                <tr>
+                  <td>Dana Bauer</td>
+                  <td><a href="https://twitter.com/geography76">@geography76</a></td>
+                </tr>
+                <tr>
+                  <td>Ken Perkins</td>
+                  <td><a href="https://twitter.com/kenperkins">@kenperkins</a></td>
+                </tr>
+                <tr>
+                  <td>Kyle Rames</td>
+                  <td><a href="https://twitter.com/krames">@krames</a></td>
+                </tr>
+                <tr>
+                  <td>Everett Toews</td>
+                  <td><a href="https://twitter.com/everett_toews">@everett_toews</a></td>
+                </tr>
+              </tbody>
+            </table>
+          </center>
         </section>
 
         <section>
           <ol>
-            <li>Cloud 101</li>
-            <li>Multi-Cloud 101</li>
-            <li>Multi-Cloud Toolkits</li>
-            <li>Break</li>
-            <li>Application Architecture</li>
-            <li>Application Code</li>
-            <li>Application Demonstrations (time permitting)</li>
-            <li>Conclusion</li>
+            <li><a href="#/cloud-101">Cloud 101</a></li>
+            <li><a href="#/multi-cloud-101">Multi-Cloud 101</a></li>
+            <li><a href="#/toolkit-installation">Multi-Cloud Toolkits</a></li>
+            <li><a href="#/break">Break</a></li>
+            <li><a href="#/app-arch">Application&nbsp;Architecture</a></li>
+            <li><a href="#/app-code">Application Code</a></li>
+            <li><a href="#/app-demos">Application Demos</a></li>
+            <li><a href="#/conclusion">Conclusion</a></li>
           </ol>
         </section>
 
-        <section>
+        <section id="cloud-101">
           <h1>Cloud 101</h1>
         </section>
 
         <section>
-          <img class="stretch" src="reveal.js/img/i-have-no-idea-what-im-doing.jpg">
+          <img class="stretch" src="reveal.js/img/no-idea.jpg">
         </section>
 
         <section>
-          <p>On-Demand</p>
-          <p>Self-Service</p>
+          <h2>On-Demand</h2>
+          <h2>Self-Service</h2>
         </section>
 
         <section>
-          <p>Broad</p>
-          <p>Network Access</p>
+          <h2>Broad</h2>
+          <h2>Network Access</h2>
         </section>
 
         <section>
-          <p>Resource Pooling</p>
+          <h2>Resource Pooling</h2>
         </section>
 
         <section>
-          <p>Rapid Elasticity</p>
+          <h2>Rapid Elasticity</h2>
         </section>
 
         <section>
-          <p>Measured Service</p>
+          <h2>Measured Service</h2>
         </section>
 
         <section>
-          <p>Flavors</p>
+          <h2>Flavors</h2>
         </section>
 
         <section>
-          <p>Software</p>
-          <p>as a Service</p>
-          <p>(SaaS)</p>
+          <h2>Software</h2>
+          <h2>as a Service</h2>
+          <h2>(SaaS)</h2>
         </section>
 
         <section>
-          <p>Platform</p>
-          <p>as a Service</p>
-          <p>(PaaS)</p>
+          <img class="stretch" src="reveal.js/img/saas.png">
         </section>
 
         <section>
-          <p>Infrastructure</p>
-          <p>as a Service</p>
-          <p>(IaaS)</p>
+          <h2>Platform</h2>
+          <h2>as a Service</h2>
+          <h2>(PaaS)</h2>
         </section>
 
         <section>
+          <img class="stretch" src="reveal.js/img/paas.png">
+        </section>
+
+        <section>
+          <h2>Infrastructure</h2>
+          <h2>as a Service</h2>
+          <h2>(IaaS)</h2>
+        </section>
+
+        <section>
+          <img class="stretch" src="reveal.js/img/iaas.png">
+        </section>
+
+        <section>
+          <h2>Private</h2>
+        </section>
+
+        <section>
+          <img class="stretch" src="reveal.js/img/private.png">
+        </section>
+
+        <section>
+          <h2>Comparison</h2>
+        </section>
+
+        <section>
+          <img class="stretch" src="reveal.js/img/comparison.png">
+        </section>
+
+        <section>
+          <h2>IaaS</h2>
+        </section>
+
+        <section>
+          <h2>Infrastructure</h2>
+          <h2>with an Inteface</h2>
+        </section>
+
+        <section id="multi-cloud-101">
+          <h1>Multi-Cloud 101</h1>
+        </section>
+
+        <section>
+          <img class="stretch" src="reveal.js/img/multi-cloud.png">
+        </section>
+
+        <section>
+          <h2>High Availability</h2>
+        </section>
+
+        <section>
+          <h2>Privacy</h2>
+        </section>
+
+        <section>
+          <h2>Cost</h2>
+        </section>
+
+        <section>
+          <h2>Perfomance</h2>
+        </section>
+
+        <section>
+          <h2>Support</h2>
+        </section>
+
+        <section>
+          <h2>Hybrid</h2>
+        </section>
+
+        <section>
+          <h2>One Size Does</h2>
+          <h2>Not Fit All</h2>
+        </section>
+
+        <section>
+          <h2>Lock-in</h2>
+        </section>
+
+        <section id="toolkit-installation">
           <h1>Multi-Cloud Toolkit</h1>
           <h1>Installation</h1>
         </section>
 
         <section>
+          <img class="stretch" src="reveal.js/img/toolkit.jpg">
+        </section>
+
+        <section>
+          <p>At this point we could go on and on about the benefits of SDKs but I want to time it out before putting that in here.</p>
+        </section>
+
+        <section>
+          <h2>Java</h2>
+          <h2>Apache jclouds</h2>
+        </section>
+
+        <section>
+          <h2>Node.js</h2>
+          <h2>pkgcloud</h2>
+        </section>
+
+        <section>
+          <h2>Python</h2>
+          <h2>Apache libcloud</h2>
+        </section>
+
+        <section>
+          <h2>Ruby</h2>
+          <h2>Fog</h2>
+        </section>
+
+        <section>
           <p>Choose your own adventure:</p>
-          <ol>
-            <li><a href="jclouds-install.html">Java: Apache jclouds</a></li>
-            <li><a href="pkgcloud-install.html">Node.js: pkgcloud</a></li>
-            <li><a href="libcloud-install.html">Python: Apache libcloud</a></li>
-            <li><a href="fog-install.html">Ruby: Fog</a></li>
-          </ol>
+          <center>
+            <table>
+              <thead>
+                <tr>
+                  <th>Language</th>
+                  <th>Toolkit</th>
+                </tr>
+              </thead>
+              <tbody>
+                <tr>
+                  <td>Java</td>
+                  <td><a href="jclouds-install.html">jclouds</a></td>
+                </tr>
+                <tr>
+                  <td>Node.js</td>
+                  <td><a href="pkgcloud-install.html">pkgcloud</a></td>
+                </tr>
+                <tr>
+                  <td>Python</td>
+                  <td><a href="libcloud-install.html">libcloud</a></td>
+                </tr>
+                <tr>
+                  <td>Ruby</td>
+                  <td><a href="fog-install.html">fog</a></td>
+                </tr>
+              </tbody>
+            </table>
+          </center>
+        </section>
+
+        <section id="break">
+          <h1>Break</h1>
         </section>
 
         <section>
-          <h1>Multi-Cloud</h1>
+          <h2>10 Minutes</h2>
+          <p>Do some kind of JavaScript countdown timer here?</p>
+        </section>
+
+        <section id="app-arch">
+          <h1>Application</h1>
+          <h1>Architecture</h1>
         </section>
 
         <section>
-          <p>Buncha stuff about multi-cloud</p>
+          <img class="stretch" src="reveal.js/img/app-arch.png">
         </section>
 
         <section>
-          <p>THE END</p>
+          <img class="stretch" src="reveal.js/img/app-arch-toolkit.png">
+        </section>
+
+        <section>
+          <h2>Load Balancer (LB)</h2>
+          <h2>haproxy</h2>
+        </section>
+
+        <section>
+          <h2>Web Server (WS)</h2>
+          <h2>Application Code</h2>
+        </section>
+
+        <section>
+          <h2>Database (DB)</h2>
+          <h2>mysql</h2>
+        </section>
+
+        <section>
+          <p>Choose your own adventure:</p>
+          <center>
+            <table>
+              <thead>
+                <tr>
+                  <th>Language</th>
+                  <th>Toolkit</th>
+                </tr>
+              </thead>
+              <tbody>
+                <tr>
+                  <td>Java</td>
+                  <td><a href="jclouds-deploy.html">jclouds</a></td>
+                </tr>
+                <tr>
+                  <td>Node.js</td>
+                  <td><a href="pkgcloud-deploy.html">pkgcloud</a></td>
+                </tr>
+                <tr>
+                  <td>Python</td>
+                  <td><a href="libcloud-deploy.html">libcloud</a></td>
+                </tr>
+                <tr>
+                  <td>Ruby</td>
+                  <td><a href="fog-deploy.html">fog</a></td>
+                </tr>
+              </tbody>
+            </table>
+          </center>
+        </section>
+
+        <section id="app-code">
+          <h1>Application</h1>
+          <h1>Code</h1>
+        </section>
+
+        <section>
+          <h2>Java</h2>
+          <h2>Jenkins? Some Grails app?</h2>
+        </section>
+
+        <section>
+          <h2>Node.js</h2>
+          <h2>?</h2>
+        </section>
+
+        <section>
+          <h2>Python</h2>
+          <h2>?</h2>
+        </section>
+
+        <section>
+          <h2>Ruby</h2>
+          <h2>?</h2>
+        </section>
+
+        <section id="app-demos">
+          <h1>Application</h1>
+          <h1>Demo</h1>
+        </section>
+
+        <section>
+          <h2>Demo</h2>
+          <ul>
+            <li>Java?</li>
+            <li>Node.js?</li>
+            <li>Python?</li>
+            <li>Ruby?</li>
+          </ul>
+        </section>
+
+        <section id="conclusion">
+          <h1>Conclusion</h1>
+        </section>
+
+        <section>
+          <img class="stretch" src="reveal.js/img/devops_borat.png">
+        </section>
+
+        <section>
+          <h2><a href="http://developer.rackspace.com/">developer.rackspace.com</a></h2>
+          <center>
+            <table>
+              <tbody>
+                <tr>
+                  <td>Dana Bauer</td>
+                  <td><a href="https://twitter.com/geography76">@geography76</a></td>
+                </tr>
+                <tr>
+                  <td>Ken Perkins</td>
+                  <td><a href="https://twitter.com/kenperkins">@kenperkins</a></td>
+                </tr>
+                <tr>
+                  <td>Kyle Rames</td>
+                  <td><a href="https://twitter.com/krames">@krames</a></td>
+                </tr>
+                <tr>
+                  <td>Everett Toews</td>
+                  <td><a href="https://twitter.com/everett_toews">@everett_toews</a></td>
+                </tr>
+              </tbody>
+            </table>
+          </center>
         </section>
 
       </div>

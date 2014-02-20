@@ -224,7 +224,7 @@ public class MultiCloudWorkshop {
      *   1. Assign names to the nodes.
      *   2. Assign the public key multi-cloud-workshop.key.
      *   3. Use the private key multi-cloud-workshop.key to login.
-     *   4. Open up ports 22, 80, 3000, 3306 for our application to use.
+     *   4. Open up ports 22, 80, 3000, 3306 in Security Groups (firewalls).
      *   5. Assign the hardware, image, and location based on the configuration.
      */
     private Map<String, NodeMetadata> createServers() throws RunNodesException, IOException {
