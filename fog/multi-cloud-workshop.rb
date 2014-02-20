@@ -2,7 +2,23 @@ require 'fog'
 
 @config = {}
 
-# Set the approprate configuration environment variables variables
+# Please set the PROVIDER environment variable to aws, hp, or rackspace.
+#
+# You will also need to set the approprate environment variables for your desired cloud
+#
+# Amazon:
+#   AWS_ACCESS_KEY
+#   AWS_SECRET_ACCESS_KEY
+#
+# HP:
+#  HP_SECRET_KEY
+#  HP_ACCESS_KEY
+#  HP_TENANT_ID
+#
+# Rackspace:
+#   RACKSPACE_USERNAME
+#   RACKSPACE_API_KEY
+#
 @config[:rackspace] = {
   :service_opts => {
     :provider => 'rackspace',
@@ -53,7 +69,7 @@ end
 
 def provider
   raise "Please set PROVIDER environment variable" unless ENV['PROVIDER']
-  @provider ||= ENV['PROVIDER'].to_sym
+  @provider ||= ENV['PROVIDER'].downcase.to_sym
 end
 
 def flavor
