@@ -43,6 +43,24 @@
         </section>
 
         <section>
+          <h2>Configuration</h2>
+          <ol>
+            <li>Open src/main/resources/provider.properties</li>
+            <li>Edit provider: rackspace or hp or aws</li>
+            <li>Edit provider.identity</li>
+            <li>Edit provider.credential</li>
+          </ol>
+        </section>
+
+        <section>
+          <h2>Compile and Run</h2>
+          <pre><code data-trim>
+$ javac -classpath "src/main/java/:src/main/resources/:lib/*" src/main/java/com/rackspace/*.java
+$ java -classpath "src/main/java/:src/main/resources/:lib/*" com.rackspace.MultiCloudWorkshop
+          </code></pre>
+        </section>
+
+        <section>
           <h2>MultiCloudWorkshop Class</h2>
           <div class="gist-it">
             <script src="http://gist-it.appspot.com/github/rackerlabs/multi-cloud-workshop/blob/gh-pages/jclouds/src/main/java/com/rackspace/MultiCloudWorkshop.java?footer=minimal&slice=48:58"></script>
@@ -111,6 +129,14 @@
             <script src="http://gist-it.appspot.com/github/rackerlabs/multi-cloud-workshop/blob/gh-pages/jclouds/src/main/java/com/rackspace/MultiCloudWorkshop.java?footer=minimal&slice=385:406"></script>
           </div>
         </section>
+
+                <section>
+          <h2>Delete Resources</h2>
+          <pre><code data-trim>
+$ java -classpath "src/main/java/:src/main/resources/:lib/*" com.rackspace.MultiCloudWorkshop
+          </code></pre>
+        </section>
+
 
         <section>
           <p><a href="index.html#/app-code">Back to the Presentation</a></p>
