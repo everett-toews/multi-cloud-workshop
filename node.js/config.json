@@ -1,0 +1,47 @@
+{
+  "keys": {
+    "public": "/keys/multi-cloud-workshop.pub",
+    "private": "/keys/multi-cloud-workshop.key"
+  },
+  "logLevel": "verbose",
+  "securityGroupName": "multi-cloud-workshop",
+  "templates": {
+    "loadBalancer": {
+      "body": "/templates/haproxy.conf.ejs",
+      "temporaryPath": "/home/ubuntu/haproxy.cfg",
+      "path": "/etc/haproxy/haproxy.cfg"
+    }
+  },
+  "settings": {
+    "rackspace" : {
+      "client": {
+        "username": "",
+        "apiKey": "",
+        "provider": "rackspace",
+        "region": "IAD"
+      },
+      "imageId": "28b21a55-b686-4e8e-be9b-b6df2aaf60b8"
+    },
+    "aws": {
+      "client": {
+        "provider": "amazon",
+        "service": "compute",
+        "keyId": "",
+        "key": ""
+      },
+      "imageId": "ami-83e2dcea",
+      "flavorId": "m1.small"
+    },
+    "hpcloud": {
+      "client": {
+        "provider": "openstack",
+        "service": "compute",
+        "username": "",
+        "password": "",
+        "authUrl": "https://region-a.geo-1.identity.hpcloudsvc.com:35357",
+        "region": "region-a.geo-1"
+      },
+      "imageId": "8c096c29-a666-4b82-99c4-c77dc70cfb40"
+    }
+  }
+}
