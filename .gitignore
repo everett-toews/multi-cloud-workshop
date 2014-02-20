@@ -4,6 +4,7 @@
 *.jar
 *.war
 *.ear
+provider.properties
 
 jclouds/lib/
 jclouds/log/
