@@ -122,12 +122,12 @@ def setup_webhead(web_server, db_server)
    "sudo apt-get -y install build-essential ruby1.9.1 ruby1.9.1-dev libopenssl-ruby1.9.1 git libpq-dev",
    "sudo apt-get -y install libmysqlclient18 libmysqlclient-dev libmagickwand-dev libmagickcore-dev libmagickcore4-extra libgraphviz-dev libgvc5",
    "sudo gem install bundler",
-   "git clone https://github.com/krames/sxsw-demo-app",
-   "cd sxsw-demo-app; bundle install --deployment",
-   "echo '#{database_yml(db_server)}' > sxsw-demo-app/config/database.yml",
-   "echo '#{carrierwave_config}' > sxsw-demo-app/config/initializers/carrierwave.rb",
-   "cd sxsw-demo-app; bundle exec rake db:migrate",
-   "cd sxsw-demo-app; bundle exec rails s -d; sleep 1"
+   "git clone https://github.com/rackerlabs/multi-cloud-demo-app demo-app",
+   "cd demo-app; bundle install --deployment",
+   "echo '#{database_yml(db_server)}' > demo-app/config/database.yml",
+   "echo '#{carrierwave_config}' > demo-app/config/initializers/carrierwave.rb",
+   "cd demo-app; bundle exec rake db:migrate",
+   "cd demo-app; bundle exec rails s -d; sleep 1"
   ]
 
   ssh web_server, "sxsw-web", commands
