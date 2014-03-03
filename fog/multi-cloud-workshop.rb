@@ -71,14 +71,6 @@ def provider
   @provider ||= ENV['PROVIDER'].downcase.to_sym
 end
 
-def flavor
-  @flavor ||= service.flavors.find {|flavor| flavor.name =~ /#{config[:flavor_name]}/ }
-end
-
-def image
-  @image ||= service.images.find {|image| image.name =~ /#{config[:image_name]}/}
-end
-
 def service
   @service ||= Fog::Compute.new config[:service_opts]
 end
@@ -97,6 +89,14 @@ def create_server(name)
   server = service.servers.create server_config
   assign_public_ip_address_if_necessary(server)
   server
+end
+
+def flavor
+  @flavor ||= service.flavors.find {|flavor| flavor.name =~ /#{config[:flavor_name]}/ }
+end
+
+def image
+  @image ||= service.images.find {|image| image.name =~ /#{config[:image_name]}/}
 end
 
 def assign_public_ip_address_if_necessary(server)
@@ -130,6 +130,29 @@ def setup_webhead(web_server, db_server)
 
   ssh web_server, "sxsw-web", commands
   puts "[sxsw-web] web server configuration complete"
+end
+
+def database_yml(db_server)
+  %Q[
+    development:
+      adapter: mysql2
+      encoding: utf8
+      database: sxsw_demo
+      pool: 5
+      username: sxsw
+      password: austin123
+      host: #{db_server.private_ip_address}
+      port: 3306
+    ]
+end
+
+def carrierwave_config
+  %Q[
+    CarrierWave.configure do |config|
+      config.fog_credentials = #{config[:service_opts].to_s}
+      config.fog_directory  = "multi-cloud-workshop"
+    end
+    ]
 end
 
 def setup_db_server(server)
@@ -173,20 +196,6 @@ def setup_haproxy(server, web_server)
   puts "[sxsw-haproxy] haproxy server configuration complete"
 end
 
-def database_yml(db_server)
-  %Q[
-    development:
-      adapter: mysql2
-      encoding: utf8
-      database: sxsw_demo
-      pool: 5
-      username: sxsw
-      password: austin123
-      host: #{db_server.private_ip_address}
-      port: 3306
-    ]
-end
-
 def haproxy_config(server)
   %Q[
     global
@@ -218,15 +227,6 @@ def haproxy_config(server)
             mode http
             balance roundrobin
             server sxsw-web #{server.private_ip_address}:3000
-    ]
-end
-
-def carrierwave_config
-  %Q[
-    CarrierWave.configure do |config|
-      config.fog_credentials = #{config[:service_opts].to_s}
-      config.fog_directory  = "multi-cloud-workshop"
-    end
     ]
 end
 
@@ -276,10 +276,6 @@ def setup_security_group
   setup_hp_security_group if provider == :hp
 end
 
-def key_pair_exist?
-  service.key_pairs.get('multi-cloud-workshop') != nil
-end
-
 def setup_key_pair
   return if key_pair_exist?
   puts "[key pair] creating key pair multi-cloud-workshop"
@@ -287,6 +283,10 @@ def setup_key_pair
   service.key_pairs.create :name => 'multi-cloud-workshop',
     :public_key => File.read('multi-cloud-workshop.pub'),
     :private_key => File.read('multi-cloud-workshop.key')
+end
+
+def key_pair_exist?
+  service.key_pairs.get('multi-cloud-workshop') != nil
 end
 
 def build_environment

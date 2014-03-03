@@ -17,3 +17,25 @@ h1 h2 {
   overflow-y: scroll;
   overflow-x: scroll;
 }
+
+#fog-table {
+	margin-top: 10px;
+	border-spacing: 0px;
+	border-width: 3px;
+	border-top-style: solid;
+	border-left-style: solid;
+}
+
+#fog-table td {
+	border-width: 3px;
+	border-bottom-style: solid;
+	border-right-style: solid;
+	padding: 10px;
+}
+
+#fog-table th {
+	border-width: 3px;
+	border-bottom-style: solid;
+	border-right-style: solid;
+	padding: 10px;
+}
