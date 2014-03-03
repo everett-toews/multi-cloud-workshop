@@ -42,9 +42,8 @@ require 'fog'
     :username => 'ubuntu',
     :groups => ['multi-cloud-workshop']
   },
-  # :flavor_name => 'Medium Instance', #'Micro Instance',
-  :flavor_name => 'm1.small', #'Micro Instance',
-  :image_name => 'ubuntu-precise-12.04-amd64-server-20131003'
+  :flavor_name => 'Medium Instance',
+  :image_name => 'ubuntu\/images\/ubuntu-precise-12.04-amd64-server-20131003'
 }
 @config[:hp] = {
   :service_opts => {
@@ -68,7 +67,7 @@ def config
 end
 
 def provider
-  raise "Please set PROVIDER environment variable" unless ENV['PROVIDER']
+  raise "Please set PROVIDER environment variable to aws, hp, or rackspace" unless ENV['PROVIDER']
   @provider ||= ENV['PROVIDER'].downcase.to_sym
 end
 
@@ -86,7 +85,6 @@ end
 
 def create_server(name)
   puts "[#{name}] Server Creating"
-  
   server_config = config[:server_opts] || {}
   server_config.merge!({
     :name => name,
@@ -95,7 +93,7 @@ def create_server(name)
     :private_key_path => 'multi-cloud-workshop.key',
     :key_name => 'multi-cloud-workshop'
   })
-  
+
   server = service.servers.create server_config
   assign_public_ip_address_if_necessary(server)
   server
@@ -143,7 +141,7 @@ def setup_db_server(server)
     "sudo debconf-set-selections <<< 'mysql-server mysql-server/root_password password admin123'",
     "sudo debconf-set-selections <<< 'mysql-server mysql-server/root_password_again password admin123'",
     "sudo apt-get -y install mysql-server",
-    
+
     # change the bind address /etc/mysql/my.cnf
     %Q[sudo sed -ie 's/bind-address.*/bind-address = #{server.private_ip_address}/' /etc/mysql/my.cnf],
     # restart server
@@ -155,7 +153,7 @@ def setup_db_server(server)
     # grant rights
     %q[sudo mysql -padmin123 -e "grant all privileges on sxsw_demo.* to 'sxsw'@'%' identified by 'austin123'"],
   ]
-  
+
   ssh server, 'sxsw-db', commands
   puts "[sxsw-db] database server configuration complete"
 end
@@ -170,7 +168,7 @@ def setup_haproxy(server, web_server)
     %Q[sudo sh -c "echo '#{haproxy_config(web_server)}' > /etc/haproxy/haproxy.cfg"],
     "sudo service haproxy restart"
   ]
-  
+
   ssh server, 'sxsw-haproxy', commands
   puts "[sxsw-haproxy] haproxy server configuration complete"
 end
@@ -265,7 +263,7 @@ end
 def setup_aws_security_group
   return if service.security_groups.find {|group| group.name == 'multi-cloud-workshop' }
   puts "[security group] Creating security group multi-cloud-workshop"
-  
+
   group = service.security_groups.create :name => 'multi-cloud-workshop', :description => 'This group was created for the SXSW Cloud Portability with Multi-Cloud Toolkits workshop'
   [80, 22, 3000, 3306].each do |port|
     group.authorize_port_range port..port, :ip_protocol => 'tcp'
@@ -285,8 +283,8 @@ end
 def setup_key_pair
   return if key_pair_exist?
   puts "[key pair] creating key pair multi-cloud-workshop"
-  
-  service.key_pairs.create :name => 'multi-cloud-workshop', 
+
+  service.key_pairs.create :name => 'multi-cloud-workshop',
     :public_key => File.read('multi-cloud-workshop.pub'),
     :private_key => File.read('multi-cloud-workshop.key')
 end
@@ -321,6 +319,3 @@ def build_environment
 end
 
 build_environment
-
-
-
