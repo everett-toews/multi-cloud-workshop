@@ -319,8 +319,8 @@ public class MultiCloudWorkshop {
                     .addStatement(exec("sleep 1"))
                     .addStatement(exec("sudo apt-get -q -y update"))
                     .addStatement(exec("sudo apt-get -q -y upgrade"))
-                    .addStatement(exec("sudo apt-get -q -y install apache2"))
-                    .addStatement(exec("echo 'Hello from " + node.getPublicAddresses() + "' > /var/www/index.html"))
+                    .addStatement(exec("wget http://mirrors.jenkins-ci.org/war/latest/jenkins.war"))
+                    .addStatement(exec("sudo java -jar jenkins.war --httpPort=80"))
                     .render(OsFamily.UNIX);
 
             computeService.runScriptOnNode(node.getId(), script, options);
