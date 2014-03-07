@@ -15,8 +15,8 @@
   "settings": {
     "rackspace" : {
       "client": {
-        "username": "",
-        "apiKey": "",
+        "username": "<your-user-name>",
+        "apiKey": "<your-api-key>",
         "provider": "rackspace",
         "region": "IAD"
       },
@@ -26,8 +26,8 @@
       "client": {
         "provider": "amazon",
         "service": "compute",
-        "keyId": "",
-        "key": ""
+        "keyId": "<your-access-key-id>",
+        "key": "<your-access-key>"
       },
       "imageId": "ami-83e2dcea",
       "flavorId": "m1.small"
@@ -36,8 +36,8 @@
       "client": {
         "provider": "openstack",
         "service": "compute",
-        "username": "",
-        "password": "",
+        "username": "<your-user-name>",
+        "password": "<your-password>",
         "authUrl": "https://region-a.geo-1.identity.hpcloudsvc.com:35357",
         "region": "region-a.geo-1"
       },
