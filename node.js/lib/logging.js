@@ -10,13 +10,15 @@ exports.getLogger = function(level) {
 
   logger = new winston.Logger({
     levels: {
-      debug: 0,
-      verbose: 1,
+      trace: 0,
+      debug: 1,
+      verbose: 2,
       info: 3,
       warn: 4,
       error: 5
     },
     colors: {
+      trace: 'magenta',
       debug: 'grey',
       verbose: 'cyan',
       info: 'green',
