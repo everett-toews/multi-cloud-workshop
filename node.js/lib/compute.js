@@ -20,12 +20,25 @@ exports.createServer = function(client, name, callback) {
         break;
       case 'openstack':
         options = {
-
+          name: name,
+          flavor: config.settings.hpcloud.flavorId,
+          image: config.settings.hpcloud.imageId,
+          keyname: config.securityGroupName,
+          securityGroups: [
+            { name: config.securityGroupName }
+          ],
+          networks: [
+            { name: 'kenperkins-network', uuid: '14be29b8-786c-4367-b3fa-f6aa3f7e1cfc' },
+            { name: 'Ext-Net', uuid: '122c72de-0924-4b9f-8cf3-b18d5d3d292c' }
+          ]
         };
         break;
       case 'rackspace':
         options =  {
-
+          name: name,
+          flavor: config.settings.rackspace.flavorId,
+          image: config.settings.rackspace.imageId,
+          keyname: config.securityGroupName
         }
     }
     return options;

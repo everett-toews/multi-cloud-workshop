@@ -66,15 +66,17 @@ async.series([
     }, next);
   },
   function(next) {
+    var username = clients[provider].provider === 'rackspace' ? 'root' : 'ubuntu';
+
     async.forEach(Object.keys(servers), function(name, cb) {
       if (name === 'web-01') {
-        bootstrap.bootstrapWeb('ubuntu', servers, cb);
+        bootstrap.bootstrapWeb(username, servers, cb);
       }
       else if (name === 'lb-01') {
-        bootstrap.bootstrapLb('ubuntu', servers, cb);
+        bootstrap.bootstrapLb(username, servers, cb);
       }
       else if (name === 'db-01') {
-        bootstrap.bootstrapDb('ubuntu', servers, cb);
+        bootstrap.bootstrapDb(username, servers, cb);
       }
       else {
         cb({ unknownHost: true });

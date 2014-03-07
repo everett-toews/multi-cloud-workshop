@@ -64,7 +64,7 @@ exports.bootstrapLb = function(username, servers, callback) {
 
 function copyHaProxyConfig(webServer) {
   return function(server, callback) {
-    exports.uploadTempate(server, config.templates.loadBalancer, { serverIp: webServer.addresses.private[0] }, callback);
+    exports.uploadTemplate(server, config.templates.loadBalancer, { serverIp: getAddress(webServer, true) }, callback);
   }
 }
 
@@ -75,13 +75,13 @@ function batchSSHCommands(username, server, commands, callback) {
        command(server, next);
     }
     else {
-      log.verbose(util.format('Exec: %s@%s', command, server.addresses.public[0]));
+      log.verbose(util.format('Exec: %s@%s', command, getAddress(server)));
       execSSHCommand(username, server, command, next);
     }
   }, callback);
 }
 
-exports.uploadTempate = function(server, template, locals, callback) {
+exports.uploadTemplate = function(server, template, locals, callback) {
   var calledBack = false, count = 0, maxAttempts = 5;
 
   function attempt() {
@@ -147,7 +147,7 @@ exports.uploadTempate = function(server, template, locals, callback) {
       log.debug('Connection :: close');
     });
     c.connect({
-      host: server.addresses.public[0],
+      host: getAddress(server),
       port: 22,
       username: 'ubuntu',
       privateKey: fs.readFileSync(process.cwd() + config.keys.private)
@@ -177,7 +177,19 @@ exports.uploadTempate = function(server, template, locals, callback) {
   }
 }
 
+function getAddress(server, priv) {
+  var address = priv ? server.addresses.private[0] : server.addresses.public[0];
 
+  if (typeof address === 'object') {
+    address = priv ? server.addresses.private.filter(findAddress)[0].addr : server.addresses.public.filter(findAddress)[0].addr;
+  }
+
+  return address;
+
+  function findAddress(addy) {
+    return addy.version === 4;
+  }
+}
 /**
  * SSH example taken liberally from mscdex's repo for ssh2 package
  *
@@ -220,12 +232,13 @@ function execSSHCommand(username, server, command, callback) {
     c.on('close', function(had_error) {
       log.debug('Connection :: close');
     });
-    c.connect({
-      host: server.addresses.public[0],
+    var options = {
+      host: getAddress(server),
       port: 22,
       username: username,
       privateKey: fs.readFileSync(process.cwd() + config.keys.private)
-    });
+    };
+    c.connect(options);
   }
 
   attempt();

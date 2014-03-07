@@ -12,7 +12,7 @@ exports.createSecurityGroup = function(client, callback) {
     callback();
   }
   else if (client.provider === 'openstack') {
-    callback();
+    exports.setupOpenstackSecurityGroup(client, callback);
   }
   else if (client.provider === 'amazon') {
     exports.setupAwsSecurityGroup(client, callback);
@@ -24,7 +24,36 @@ exports.createSecurityGroup = function(client, callback) {
 
 exports.destroySecurityGroup = function(client, callback) {
   log.verbose('Destroying Security Group: ' + client.provider);
-  client.destroyGroup(securityGroupName, callback)
+
+  var name = securityGroupName;
+
+  // early return; rackspace doesn't support groups
+  if (client.provider === 'rackspace') {
+    callback();
+    return
+  }
+  // can't delete by name with openstack
+  else if (client.provider === 'openstack') {
+    client.listGroups(function(err, groups) {
+      if (err) {
+        callback(err);
+        return;
+      }
+
+      groups.forEach(function(group) {
+        if (group.name === securityGroupName) {
+          name = group.id;
+        }
+      });
+
+      log.verbose('group id', name);
+      client.destroyGroup(name, callback);
+    });
+
+    return;
+  }
+
+  client.destroyGroup(name, callback)
 };
 
 exports.setupAwsSecurityGroup = function(client, callback) {
@@ -59,6 +88,37 @@ exports.setupAwsSecurityGroup = function(client, callback) {
       });
     }, function(err) {
       callback(err);
+    });
+  });
+};
+
+exports.setupOpenstackSecurityGroup = function(client, callback) {
+  client.addGroup({
+    name: securityGroupName,
+    description: 'multi cloud portability workshop'
+  }, function(err, group) {
+    if (err) {
+      callback(err);
+      return;
+    }
+
+    function getRule(port) {
+      return { groupId: group.id,
+        ipProtocol: 'tcp',
+        cidr: '0.0.0.0/0',
+        fromPort: port,
+        toPort: port
+      }
+    }
+
+    client.addRules([
+      getRule(22), getRule(80), getRule(3000), getRule(3306)
+    ], function(err, rules) {
+      if (err) {
+        log.error(err);
+      }
+
+      callback(err, rules);
     });
   });
 };
