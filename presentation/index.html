@@ -95,6 +95,11 @@
         </section>
 
         <section>
+          <h2>Essential</h2>
+          <h2>Characteristics</h2>
+        </section>
+
+        <section>
           <h2>On-Demand</h2>
           <h2>Self-Service</h2>
         </section>
@@ -117,7 +122,8 @@
         </section>
 
         <section>
-          <h2>Flavors</h2>
+          <h2>Service</h2>
+          <h2>Models</h2>
         </section>
 
         <section>
@@ -358,6 +364,27 @@
             <li>Edit provider.identity</li>
             <li>Edit provider.credential</li>
           </ol>
+        </section>
+
+        <section>
+          <h2>jclouds</h2>
+          <div class="inline-code" data-markdown>
+            <script type="text/template">
+              ```bash
+                # Change the provider property to match the prefix of one of the clouds below
+                # Update the identity and credential for the cloud you want to use
+
+                provider=rackspace
+
+                rackspace.name=rackspace-cloudservers-us
+                rackspace.identity=myRackspaceUsername
+                rackspace.credential=myRackspaceApiKey
+                rackspace.location=IAD
+                rackspace.image=Ubuntu 12.04 LTS \\(Precise Pangolin\\)$
+                rackspace.hardware=performance1-1
+            ```
+            </script>
+          </div>
         </section>
 
         <section>
