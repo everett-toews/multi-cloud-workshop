@@ -55,9 +55,9 @@ public class MultiCloudWorkshopDelete {
 
         try {
             multiCloudWorkshopDelete = new MultiCloudWorkshopDelete();
+            multiCloudWorkshopDelete.deleteFloatingIPsAndNodes();
             multiCloudWorkshopDelete.deleteKeyPairs();
             multiCloudWorkshopDelete.deleteSecurityGroups();
-            multiCloudWorkshopDelete.deleteFloatingIPsAndNodes();
         } catch (Throwable e) {
             e.printStackTrace();
         } finally {
