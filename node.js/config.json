@@ -20,7 +20,8 @@
         "provider": "rackspace",
         "region": "IAD"
       },
-      "imageId": "28b21a55-b686-4e8e-be9b-b6df2aaf60b8"
+      "imageId": "28b21a55-b686-4e8e-be9b-b6df2aaf60b8",
+      "flavorId": "performance1-1"
     },
     "aws": {
       "client": {
@@ -41,7 +42,8 @@
         "authUrl": "https://region-a.geo-1.identity.hpcloudsvc.com:35357",
         "region": "region-a.geo-1"
       },
-      "imageId": "8c096c29-a666-4b82-99c4-c77dc70cfb40"
+      "imageId": "8c096c29-a666-4b82-99c4-c77dc70cfb40",
+      "flavorId": "100"
     }
   }
 }
