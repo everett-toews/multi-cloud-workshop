@@ -39,3 +39,15 @@ h1 h2 {
 	border-right-style: solid;
 	padding: 10px;
 }
+
+.reveal .code {
+    display: inline-block;
+    border: 1px solid #ccc;
+    background: #eee;
+    color: #333;
+    padding: 5px;
+    font-size: 80%;
+    font-family: monospace;
+    border-radius: 3px;
+    line-height: 1.1;
+}
