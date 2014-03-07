@@ -329,11 +329,28 @@
         <section>
           <h2>pkgcloud</h2>
           <ol>
-            <li>Open file?</li>
-            <li>Edit Provider</li>
-            <li>Edit Identity</li>
-            <li>Edit Credential</li>
+            <li>Open <code class="code">config.json</code></li>
+            <li>Add Credentials for your provider (rackspace/aws/hpcloud)
+            <ul>
+              <li>Excerpt from <code class="code">config.json</code></li>
+            </ul></li>
           </ol>
+          <div class="inline-code" data-markdown>
+            <script type="text/template">
+              ```json
+                "rackspace" : {
+                  "client": {
+                    "username": "<your-user-name>",
+                    "apiKey": "<your-api-key>",
+                    "provider": "rackspace",
+                    "region": "IAD"
+                  },
+                  "imageId": "28b21a55-b686-4e8e-be9b-b6df2aaf60b8",
+                  "flavorId": "performance1-1"
+                }
+            ```
+            </script>
+          </div>
         </section>
 
         <section>
