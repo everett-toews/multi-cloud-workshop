@@ -39,103 +39,393 @@
       <div class="slides">
         <section>
           <h2>jclouds</h2>
-          <h2>Code Walkthrough</h2>
+          <h2>Walkthrough</h2>
         </section>
 
         <section>
-          <h2>Compile and Run</h2>
-          <pre><code data-trim>
+          <h2>Run the application</h2>
+          <div class="inline-code" data-markdown>
+            <script type="text/template">
+              ```bash
 # Replace : with ; on Windows
 $ javac -classpath "lib/*:src/main/java/:src/main/resources/" src/main/java/com/rackspace/*.java
 $ java -classpath "lib/*:src/main/java/:src/main/resources/" com.rackspace.MultiCloudWorkshop
-          </code></pre>
-        </section>
-
-        <section>
-          <h2>MultiCloudWorkshop Class</h2>
-          <div class="gist-it">
-            <script src="http://gist-it.appspot.com/github/rackerlabs/multi-cloud-workshop/blob/gh-pages/jclouds/src/main/java/com/rackspace/MultiCloudWorkshop.java?footer=minimal&slice=48:58"></script>
+              ```
+            </script>
           </div>
         </section>
 
         <section>
-          <h2>main</h2>
-          <div class="gist-it">
-            <script src="http://gist-it.appspot.com/github/rackerlabs/multi-cloud-workshop/blob/gh-pages/jclouds/src/main/java/com/rackspace/MultiCloudWorkshop.java?footer=minimal&slice=73:101"></script>
+          <h2>Main</h2>
+          <div class="inline-code" data-markdown>
+            <script type="text/template">
+              ```java
+/**
+ * Do the following to build an application architecture:
+ *   1. Setup a key pair for remote access to servers.
+ *   2. Create 4 servers.
+ *   3. Setup 1 server as a database.
+ *   4. Setup 2 servers as web servers.
+ *   5. Setup 1 server as a load balancer.
+ *   6. Print out the results.
+ */
+public static void main(String[] args) {
+    MultiCloudWorkshop multiCloudWorkshop = null;
+
+    try {
+        multiCloudWorkshop = new MultiCloudWorkshop();
+
+        multiCloudWorkshop.setupKeyPair();
+        Map<String, NodeMetadata> nameToNode = multiCloudWorkshop.createServers();
+        multiCloudWorkshop.setupDatabase(nameToNode.get(DATABASE));
+        multiCloudWorkshop.setupWebServers(getWebServers(nameToNode));
+        multiCloudWorkshop.setupLoadBalancer(nameToNode.get(LOAD_BALANCER), getWebServers(nameToNode));
+        multiCloudWorkshop.printResults(nameToNode);
+    } catch (Throwable e) {
+        e.printStackTrace();
+    } finally {
+        if (multiCloudWorkshop != null) {
+            multiCloudWorkshop.close();
+        }
+    }
+}
+              ```
+            </script>
           </div>
         </section>
 
         <section>
-          <h2>Constructor</h2>
-          <div class="gist-it">
-            <script src="http://gist-it.appspot.com/github/rackerlabs/multi-cloud-workshop/blob/gh-pages/jclouds/src/main/java/com/rackspace/MultiCloudWorkshop.java?footer=minimal&slice=103:133"></script>
-          </div>
-        </section>
+          <h2>Configuration</h2>
+          <div class="inline-code" data-markdown>
+            <script type="text/template">
+              ```java
+/**
+ * Initialize the following resources:
+ *   1. A timer for timing how long it took to execute the class.
+ *   2. The cloud properties for configuration.
+ *   3. Modules for logging and ssh.
+ *   4. Overrides to increase how often jclouds polls for server status and
+ *      how long it waits for ssh to timeout.
+ *   5. The ComputeService abstract layer for working with clouds.
+ */
+public MultiCloudWorkshop() throws IOException {
+    timer = Stopwatch.createStarted();
+    props = getProviderProperties();
 
-        <section>
-          <h2>Cloud Configuration</h2>
-          <div class="gist-it">
-            <script src="http://gist-it.appspot.com/github/rackerlabs/multi-cloud-workshop/blob/gh-pages/jclouds/src/main/java/com/rackspace/MultiCloudWorkshop.java?footer=minimal&slice=135:155"></script>
-          </div>
-        </section>
+    logger.info(format("Multi-Cloud Workshop on %s", props.get(PROVIDER).toUpperCase()));
 
-        <section>
-          <h2>Key Pairs</h2>
-          <div class="gist-it">
-            <script src="http://gist-it.appspot.com/github/rackerlabs/multi-cloud-workshop/blob/gh-pages/jclouds/src/main/java/com/rackspace/MultiCloudWorkshop.java?footer=minimal&slice=157:219"></script>
+    Iterable<Module> modules = ImmutableSet.<Module>of(
+            new SLF4JLoggingModule(),
+            new SshjSshClientModule());
+
+    Properties overrides = new Properties();
+    overrides.setProperty(POLL_INITIAL_PERIOD, "30000");
+    overrides.setProperty(POLL_MAX_PERIOD, "30000");
+    overrides.setProperty(TIMEOUT_SCRIPT_COMPLETE, "1200000");
+
+    ComputeServiceContext context = ContextBuilder.newBuilder(props.get(NAME))
+            .credentials(props.get(IDENTITY), props.get(CREDENTIAL))
+            .modules(modules)
+            .overrides(overrides)
+            .buildView(ComputeServiceContext.class);
+    computeService = context.getComputeService();
+}
+              ```
+            </script>
           </div>
         </section>
 
         <section>
           <h2>Security Groups</h2>
-          <div class="gist-it">
-            <script src="http://gist-it.appspot.com/github/rackerlabs/multi-cloud-workshop/blob/gh-pages/jclouds/src/main/java/com/rackspace/MultiCloudWorkshop.java?footer=minimal&slice=240"></script>
+          <div class="inline-code" data-markdown>
+            <script type="text/template">
+              ```java
+// inboundPorts configure Security Groups
+TemplateOptions options = computeService.templateOptions()
+        .nodeNames(nodeNames)
+        .overrideLoginPrivateKey(privateKey)
+        .inboundPorts(22, 80, 3000, 3306);
+              ```
+            </script>
+          </div>
+        </section>
+
+        <section>
+          <h2>Key Pairs</h2>
+          <div class="inline-code" data-markdown>
+            <script type="text/template">
+              ```java
+/**
+ * Put the multi-cloud-workshop.pub public key in the cloud so we can login
+ * to the servers using the multi-cloud-workshop.key private key.
+ */
+private void setupKeyPair() throws IOException {
+    logger.info("Key pair setup started");
+
+    if (keyPairExists()) {
+        logger.info(format("  Key pair already exists: %s", MCW));
+        return;
+    }
+
+    String publicKey = Resources.toString(getResource(PUBLIC_KEY_FILENAME), Charsets.UTF_8);
+
+    if (props.get(PROVIDER).equals("aws")) {
+        AWSEC2Api awsEc2Api = computeService.getContext().unwrapApi(AWSEC2Api.class);
+        AWSKeyPairApi awsKeyPairApi = awsEc2Api.getKeyPairApiForRegion(props.get(LOCATION)).get();
+
+        awsKeyPairApi.importKeyPairInRegion(props.get(LOCATION), MCW, publicKey);
+    } else {
+        RestContext<NovaApi, NovaAsyncApi> novaContext = computeService.getContext().unwrap();
+        NovaApi novaApi = novaContext.getApi();
+        KeyPairApi keyPairApi = novaApi.getKeyPairExtensionForZone(props.get(LOCATION)).get();
+
+        keyPairApi.createWithPublicKey(MCW, publicKey);
+    }
+
+    logger.info(format("  Key pair created: %s", MCW));
+}
+
+/**
+ * Determine if the multi-cloud-workshop.pub public key is already in the cloud.
+ */
+private boolean keyPairExists() {
+    if (props.get(PROVIDER).equals("aws")) {
+        AWSEC2Api awsEc2Api = computeService.getContext().unwrapApi(AWSEC2Api.class);
+        AWSKeyPairApi awsKeyPairApi = awsEc2Api.getKeyPairApiForRegion(props.get(LOCATION)).get();
+
+        Set<org.jclouds.ec2.domain.KeyPair> keyPairs = awsKeyPairApi.describeKeyPairsInRegion(props.get(LOCATION), MCW);
+
+        for (org.jclouds.ec2.domain.KeyPair keyPair : keyPairs) {
+            if (keyPair.getKeyName().equals(MCW)) {
+                return true;
+            }
+        }
+
+        return false;
+    } else {
+        RestContext<NovaApi, NovaAsyncApi> novaContext = computeService.getContext().unwrap();
+        NovaApi novaApi = novaContext.getApi();
+        KeyPairApi keyPairApi = novaApi.getKeyPairExtensionForZone(props.get(LOCATION)).get();
+
+        ImmutableSet<? extends KeyPair> keyPairs = keyPairApi.list().toSet();
+
+        for (KeyPair keyPair : keyPairs) {
+            if (keyPair.getName().equals(MCW)) {
+                return true;
+            }
+        }
+
+        return false;
+    }
+}
+              ```
+            </script>
           </div>
         </section>
 
         <section>
           <h2>Create Servers</h2>
-          <div class="gist-it">
-            <script src="http://gist-it.appspot.com/github/rackerlabs/multi-cloud-workshop/blob/gh-pages/jclouds/src/main/java/com/rackspace/MultiCloudWorkshop.java?footer=minimal&slice=221:278"></script>
+          <div class="inline-code" data-markdown>
+            <script type="text/template">
+              ```java
+/**
+ * Create 4 servers simultaneously with the options:
+ *   1. Assign names to the nodes.
+ *   2. Assign the public key multi-cloud-workshop.key.
+ *   3. Use the private key multi-cloud-workshop.key to login.
+ *   4. Open up ports 22, 80, 3000, 3306 in Security Groups (firewalls).
+ *   5. Assign the hardware, image, and location based on the configuration.
+ */
+private Map<String, NodeMetadata> createServers() throws RunNodesException, IOException {
+    Set<String> nodeNames = ImmutableSet.of(DATABASE, WEB_SERVER_01, WEB_SERVER_02, LOAD_BALANCER);
+
+    logger.info(format("Servers boot up started: %s", Joiner.on(", ").join(nodeNames)));
+    logger.info("  Check log/jclouds-wire.log for progress");
+
+    String privateKey = Resources.toString(getResource(PRIVATE_KEY_FILENAME), Charsets.UTF_8);
+
+    TemplateOptions options = computeService.templateOptions()
+            .nodeNames(nodeNames)
+            .overrideLoginPrivateKey(privateKey)
+            .inboundPorts(22, 80, 3000, 3306);
+
+    String hardwareId = props.get(HARDWARE);
+
+    if (props.get(PROVIDER).equals("aws")) {
+        options = options.as(EC2TemplateOptions.class).keyPair(MCW);
+    } else {
+        hardwareId = fromZoneAndId(props.get(LOCATION), props.get(HARDWARE)).slashEncode();
+        options = options.as(NovaTemplateOptions.class).keyPairName(MCW).generateKeyPair(false);
+    }
+
+    Template template = computeService.templateBuilder()
+            .imageNameMatches(props.get(IMAGE))
+            .locationId(props.get(LOCATION))
+            .hardwareId(hardwareId)
+            .options(options)
+            .build();
+
+    Set<? extends NodeMetadata> nodes = computeService.createNodesInGroup(MCW, 4, template);
+    Map<String, NodeMetadata> nameToNode = newHashMap();
+
+    // This kludge is temporarily necessary because of bug https://issues.apache.org/jira/browse/JCLOUDS-467 :(
+    // All of your nodes will be named the same in AWS. This will be fixed in jclouds 1.7.2
+    if (props.get(PROVIDER).equals("aws")) {
+        Iterator<? extends NodeMetadata> nodeIterator = nodes.iterator();
+        nameToNode.put(DATABASE, nodeIterator.next());
+        nameToNode.put(WEB_SERVER_01, nodeIterator.next());
+        nameToNode.put(WEB_SERVER_02, nodeIterator.next());
+        nameToNode.put(LOAD_BALANCER, nodeIterator.next());
+    } else {
+        for (NodeMetadata node : nodes) {
+            nameToNode.put(node.getName(), node);
+        }
+    }
+
+    logger.info("  Servers boot up completed");
+
+    return nameToNode;
+}
+              ```
+            </script>
           </div>
         </section>
 
         <section>
           <h2>Setup Database</h2>
-          <div class="gist-it">
-            <script src="http://gist-it.appspot.com/github/rackerlabs/multi-cloud-workshop/blob/gh-pages/jclouds/src/main/java/com/rackspace/MultiCloudWorkshop.java?footer=minimal&slice=280:304"></script>
+          <div class="inline-code" data-markdown>
+            <script type="text/template">
+              ```java
+/**
+ * Run the ssh commands necessary to setup node as a database.
+ */
+private void setupDatabase(NodeMetadata node) throws IOException {
+    logger.info(format("Database setup started: %s", node.getName()));
+    logger.info("  Check log/jclouds-ssh.log for progress");
+
+    RunScriptOptions options = RunScriptOptions.Builder
+            .blockOnComplete(true);
+
+    String script = new ScriptBuilder()
+            .addStatement(exec("sleep 1"))
+            .addStatement(exec("sudo apt-get -q -y update"))
+            .addStatement(exec("sudo apt-get -q -y upgrade"))
+            .addStatement(exec("sudo debconf-set-selections <<< 'mysql-server mysql-server/root_password password admin123'"))
+            .addStatement(exec("sudo debconf-set-selections <<< 'mysql-server mysql-server/root_password_again password admin123'"))
+            .addStatement(exec("sudo apt-get -q -y install mysql-server"))
+            .addStatement(exec(format("sudo sed -ie 's/bind-address.*/bind-address = %s/' /etc/mysql/my.cnf", getOnlyElement(node.getPrivateAddresses()))))
+            .addStatement(exec("sudo service mysql restart"))
+            .render(OsFamily.UNIX);
+
+    computeService.runScriptOnNode(node.getId(), script, options);
+
+    logger.info("  Database setup complete");
+}
+              ```
+            </script>
           </div>
         </section>
 
         <section>
           <h2>Setup Web Servers</h2>
-          <div class="gist-it">
-            <script src="http://gist-it.appspot.com/github/rackerlabs/multi-cloud-workshop/blob/gh-pages/jclouds/src/main/java/com/rackspace/MultiCloudWorkshop.java?footer=minimal&slice=306:329"></script>
+          <div class="inline-code" data-markdown>
+            <script type="text/template">
+              ```java
+/**
+ * Run the ssh commands necessary to setup the nodes as web servers.
+ */
+private void setupWebServers(List<NodeMetadata> webServerNodes) {
+    for (NodeMetadata node : webServerNodes) {
+        logger.info(format("Web server setup started: %s", node.getName()));
+        logger.info("  Check log/jclouds-ssh.log for progress");
+
+        RunScriptOptions options = RunScriptOptions.Builder
+                .blockOnComplete(true);
+
+        String script = new ScriptBuilder()
+                .addStatement(exec("sleep 1"))
+                .addStatement(exec("sudo apt-get -q -y update"))
+                .addStatement(exec("sudo apt-get -q -y upgrade"))
+                .addStatement(exec("sudo apt-get install -y openjdk-7-jre-headless"))
+                .addStatement(exec("sudo wget http://mirrors.jenkins-ci.org/war/latest/jenkins.war"))
+                .addStatement(exec("sudo java -jar jenkins.war --httpPort=80 &"))
+                .render(OsFamily.UNIX);
+
+        computeService.runScriptOnNode(node.getId(), script, options);
+
+        logger.info("  Web server setup complete");
+    }
+}
+              ```
+            </script>
           </div>
         </section>
 
         <section>
           <h2>Setup Load Balancer</h2>
-          <div class="gist-it">
-            <script src="http://gist-it.appspot.com/github/rackerlabs/multi-cloud-workshop/blob/gh-pages/jclouds/src/main/java/com/rackspace/MultiCloudWorkshop.java?footer=minimal&slice=346:383"></script>
+          <div class="inline-code" data-markdown>
+            <script type="text/template">
+              ```java
+/**
+ * Run the ssh command necessary to setup the node as a load balancer.
+ */
+private void setupLoadBalancer(NodeMetadata node, List<NodeMetadata> webServerNodes) throws IOException {
+    logger.info(format("Load balancer setup started: %s", node.getName()));
+    logger.info("  Check log/jclouds-ssh.log for progress");
+
+    RunScriptOptions options = RunScriptOptions.Builder
+            .blockOnComplete(true);
+
+    String script = new ScriptBuilder()
+            .addStatement(exec("sleep 1"))
+            .addStatement(exec("sudo apt-get -q -y update"))
+            .addStatement(exec("sudo apt-get -q -y upgrade"))
+            .addStatement(exec("sudo apt-get -q -y install haproxy"))
+            .addStatement(exec("sudo sed -ie 's/ENABLED=0/ENABLED=1/' /etc/default/haproxy"))
+            .addStatement(exec(format("sudo sh -c \"echo '%s' > /etc/haproxy/haproxy.cfg\"", getLoadBalancerConfig(webServerNodes))))
+            .addStatement(exec("sudo service haproxy restart"))
+            .render(OsFamily.UNIX);
+
+    computeService.runScriptOnNode(node.getId(), script, options);
+
+    logger.info("  Load balancer setup complete");
+}
+              ```
+            </script>
           </div>
         </section>
 
         <section>
-          <h2>Print Results</h2>
-          <div class="gist-it">
-            <script src="http://gist-it.appspot.com/github/rackerlabs/multi-cloud-workshop/blob/gh-pages/jclouds/src/main/java/com/rackspace/MultiCloudWorkshop.java?footer=minimal&slice=385:406"></script>
+          <h2>Logging</h2>
+          <div class="inline-code" data-markdown>
+            <script type="text/template">
+              ```java
+/**
+ * Print the results.
+ */
+private void printResults(Map<String, NodeMetadata> nameToNode) throws IOException {
+    NodeMetadata loadBalancerNode = nameToNode.get(LOAD_BALANCER);
+
+    logger.info(format("%nTo ssh into the individual servers: "));
+
+    String privateKeyFilePath = getResource(PRIVATE_KEY_FILENAME).getPath();
+
+    for (String name : nameToNode.keySet()) {
+        NodeMetadata node = nameToNode.get(name);
+        String publicIpAddress = getOnlyElement(node.getPublicAddresses());
+        String user = node.getCredentials().getUser();
+
+        logger.info(format("  %-36s ssh -i %s %s@%s", name, privateKeyFilePath, user, publicIpAddress));
+
+        nameToNode.put(name, node);
+    }
+
+    logger.info(format("%nGo to http://%s to test the application%n", getOnlyElement(loadBalancerNode.getPublicAddresses())));
+}
+              ```
+            </script>
           </div>
         </section>
-
-        <section>
-          <h2>Delete Resources</h2>
-          <pre><code data-trim>
-# Replace : with ; on Windows
-$ java -classpath "lib/*:src/main/java/:src/main/resources/" com.rackspace.MultiCloudWorkshopDelete
-          </code></pre>
-        </section>
-
 
         <section>
           <p><a href="index.html#/app-code">Back to the Presentation</a></p>
