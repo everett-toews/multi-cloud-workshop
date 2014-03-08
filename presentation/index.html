@@ -65,19 +65,32 @@
         </section>
 
         <section>
+          <h2>What are we trying to do?</h2>
+        </section>
+
+        <section>
           <ol>
             <li><a href="#/cloud-101">Cloud 101</a></li>
             <li><a href="#/multi-cloud-101">Multi-Cloud 101</a></li>
             <li><a href="#/toolkit-installation">Multi-Cloud Toolkits</a></li>
-            <li><a href="#/creds">Cloud Credentials</a></li>
+            <li><a href="#/getting-started">Getting Started</a></li>
             <li><a href="#/break">Break</a></li>
-            <li><a href="#/deploy-config">Deployment&nbsp;Configuration</a></li>
-            <li><a href="#/deploy-arch">Deployment&nbsp;Architecture</a></li>
+            <li><a href="#/deploy-config">Configuration</a></li>
+            <li><a href="#/deploy-arch">Architecture</a></li>
             <li><a href="#/app-code">Application Code</a></li>
             <li><a href="#/app-demo">Application Demo</a></li>
             <li><a href="#/next">What's Next?</a></li>
             <li><a href="#/conclusion">Conclusion</a></li>
           </ol>
+        </section>
+
+        <section>
+          <h2>Links & Notes</h2>
+          <ul>
+            <li><a href="http://j.mp/mcw-sxsw">Etherpad</a></li>
+            <li>Have a text editor</li>
+            <li>Use your command prompt</li>
+          </ul>
         </section>
 
         <section id="cloud-101">
@@ -223,8 +236,7 @@
         </section>
 
         <section id="toolkit-installation">
-          <h1>Multi-Cloud Toolkit</h1>
-          <h1>Installation</h1>
+          <h1>Multi-Cloud Toolkits</h1>
         </section>
 
         <section>
@@ -251,10 +263,68 @@
           <h2>Fog</h2>
         </section>
 
+        <section id="getting-started">
+          <h2>Let's get started</h2>
+          <ol>
+            <li>Get your cloud credentials</li>
+            <li>Install the toolkits</li>
+            <li>Update your configuration</li>
+          </ol>
+
+        </section>
+
+        <section id="creds">
+          <h2>Cloud</h2>
+          <h2>Credentials</h2>
+        </section>
+
         <section>
-          <p>Choose your own adventure:</p>
-          <center>
-            <table>
+          <h2><a href="https://mycloud.rackspace.com/">Rackspace</a></h2>
+        </section>
+
+        <section>
+          <h2><a href="https://console.hpcloud.com/">HP</a></h2>
+
+          <p>Note: Choose Classic Console if you're using jclouds,
+            go to https://horizon.hpcloud.com otherwise.</p>
+        </section>
+
+        <section>
+          <h2>Log in to the control panel</h2>
+
+          <p>https://horizon.hpcloud.com for account management</p>
+          <img class="stretch" src="reveal.js/img/hpcloud_login.png">
+        </section>
+
+        <section>
+          <h2>Choose Manage Access Keys to get the API Key and Secret Key</h2>
+
+          <p>(Optional depending on toolkit)</p>
+          <img class="stretch" src="reveal.js/img/hpcloud_manage_access_keys.png">
+        </section>
+
+        <section>
+          <h2>Copy keys from here</h2>
+          <img class="stretch" src="reveal.js/img/hpcloud_accesskeys.png">
+        </section>
+
+        <section>
+          <h2>Then, go to Identity > Projects</h2>
+          <img class="stretch" src="reveal.js/img/hpcloud_projectname.png">
+        </section>
+
+        <section>
+          <h2>Also, activate what services you want with Manage Services</h2>
+          <img class="stretch" src="reveal.js/img/hpcloud_activateservices.png">
+        </section>
+
+        <section>
+          <h2><a href="https://console.aws.amazon.com/">AWS</a></h2>
+        </section>
+
+        <section>
+          <h2>Install your Toolkit</h2>
+            <table style="margin: 0 auto;">
               <thead>
                 <tr>
                   <th>Language</th>
@@ -280,53 +350,6 @@
                 </tr>
               </tbody>
             </table>
-          </center>
-        </section>
-
-        <section id="creds">
-          <h2>Cloud</h2>
-          <h2>Credentials</h2>
-        </section>
-
-        <section>
-          <h2><a href="https://mycloud.rackspace.com/">Rackspace</a></h2>
-        </section>
-
-        <section>
-          <h2><a href="https://console.hpcloud.com/">HP</a></h2>
-          <p>Note: Choose Classic Console if you're using jclouds,
-          go to https://horizon.hpcloud.com otherwise.</p>
-        </section>
-
-        <section>
-          <h2>Log in to the control panel</h2>
-          <p>https://horizon.hpcloud.com for account management</p>
-          <img class="stretch" src="reveal.js/img/hpcloud_login.png">
-        </section>
-
-        <section>
-          <h2>Choose Manage Access Keys to get the API Key and Secret Key</h2>
-          <p>(Optional depending on toolkit)</p>
-          <img class="stretch" src="reveal.js/img/hpcloud_manage_access_keys.png">
-        </section>
-
-        <section>
-          <h2>Copy keys from here</h2>
-          <img class="stretch" src="reveal.js/img/hpcloud_accesskeys.png">
-        </section>
-
-        <section>
-          <h2>Then, go to Identity > Projects</h2>
-          <img class="stretch" src="reveal.js/img/hpcloud_projectname.png">
-        </section>
-
-        <section>
-          <h2>Also, activate what services you want with Manage Services</h2>
-          <img class="stretch" src="reveal.js/img/hpcloud_activateservices.png">
-        </section>
-
-        <section>
-          <h2><a href="https://console.aws.amazon.com/">AWS</a></h2>
         </section>
 
         <section id="break">
@@ -334,16 +357,19 @@
         </section>
 
         <section>
-          <h2>10 Minutes</h2>
+          <h2>15 Minutes</h2>
         </section>
 
         <section id="deploy-config">
-          <h1>Deployment</h1>
           <h1>Configuration</h1>
         </section>
 
         <section>
           <img class="stretch" src="reveal.js/img/u2_cockpit.jpg">
+        </section>
+
+        <section>
+          <img class="stretch" src="reveal.js/img/toolkit.jpg">
         </section>
 
         <section>
@@ -392,11 +418,13 @@
           <ol>
             <li>Open <code class="code">config.json</code></li>
             <li>Add Credentials for your provider (rackspace/aws/hpcloud)
-            <ul>
-              <li>Excerpt from <code class="code">config.json</code></li>
-            </ul></li>
+            </li>
           </ol>
-          <div class="inline-code" data-markdown>
+        </section>
+
+        <section>
+          <h2>pkgcloud</h2>
+           <div class="inline-code" data-markdown>
             <script type="text/template">
               ```json
                 "rackspace" : {
@@ -413,7 +441,6 @@
             </script>
           </div>
         </section>
-
         <section>
           <h2>libcloud</h2>
           <ol>
@@ -452,7 +479,6 @@
         </section>
 
         <section id="deploy-arch">
-          <h1>Deployment</h1>
           <h1>Architecture</h1>
         </section>
 
