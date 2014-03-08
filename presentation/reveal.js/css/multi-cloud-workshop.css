@@ -43,3 +43,7 @@ h1 h2 {
 .reveal .code {
     color: #ffc529;
 }
+
+.reveal .white {
+    background-color: white;
+}

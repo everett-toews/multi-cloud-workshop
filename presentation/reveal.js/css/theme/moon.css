@@ -98,6 +98,7 @@ body {
 
 .reveal section img.matte {
     border: 20px solid white;
+    margin: 0 0 0 -10px;
 }
 
 .reveal a:hover img {
