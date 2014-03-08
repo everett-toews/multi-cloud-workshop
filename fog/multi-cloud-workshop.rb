@@ -113,7 +113,7 @@ def ssh(server, name, commands, debug = true)
 end
 
 def setup_webhead(web_server, db_server)
-  puts "[sxsw-web] Started web server configuration"
+  puts "[mcw-web] Started web server configuration"
   commands = [
    "sudo apt-get update",
    "sudo apt-get upgrade -y",
@@ -128,8 +128,8 @@ def setup_webhead(web_server, db_server)
    "cd demo-app; bundle exec rails s -d; sleep 1"
   ]
 
-  ssh web_server, "sxsw-web", commands
-  puts "[sxsw-web] web server configuration complete"
+  ssh web_server, "mcw-web", commands
+  puts "[mcw-web] web server configuration complete"
 end
 
 def database_yml(db_server)
@@ -137,9 +137,9 @@ def database_yml(db_server)
     development:
       adapter: mysql2
       encoding: utf8
-      database: sxsw_demo
+      database: mcw_demo
       pool: 5
-      username: sxsw
+      username: mcw
       password: austin123
       host: #{db_server.private_ip_address}
       port: 3306
@@ -156,7 +156,7 @@ def carrierwave_config
 end
 
 def setup_db_server(server)
-  puts "[sxsw-db] Started database server configuration"
+  puts "[mcw-db] Started database server configuration"
   commands = [
     "sudo apt-get update",
     "sudo apt-get upgrade -y",
@@ -170,19 +170,19 @@ def setup_db_server(server)
     # restart server
     "sudo service mysql restart",
     # create user
-    %q[sudo mysql -padmin123 -e "CREATE USER 'sxsw'@'10.%' IDENTIFIED BY 'austin123'"],
+    %q[sudo mysql -padmin123 -e "CREATE USER 'mcw'@'10.%' IDENTIFIED BY 'austin123'"],
     # create database
-    "sudo mysql -padmin123 -e 'CREATE DATABASE sxsw_demo'",
+    "sudo mysql -padmin123 -e 'CREATE DATABASE mcw_demo'",
     # grant rights
-    %q[sudo mysql -padmin123 -e "grant all privileges on sxsw_demo.* to 'sxsw'@'%' identified by 'austin123'"],
+    %q[sudo mysql -padmin123 -e "grant all privileges on mcw_demo.* to 'mcw'@'%' identified by 'austin123'"],
   ]
 
-  ssh server, 'sxsw-db', commands
-  puts "[sxsw-db] database server configuration complete"
+  ssh server, 'mcw-db', commands
+  puts "[mcw-db] database server configuration complete"
 end
 
 def setup_haproxy(server, web_server)
-  puts "[sxsw-haproxy] Started haproxy server configuration"
+  puts "[mcw-haproxy] Started haproxy server configuration"
   commands = [
     "sudo apt-get update",
     "sudo apt-get upgrade -y",
@@ -192,8 +192,8 @@ def setup_haproxy(server, web_server)
     "sudo service haproxy restart"
   ]
 
-  ssh server, 'sxsw-haproxy', commands
-  puts "[sxsw-haproxy] haproxy server configuration complete"
+  ssh server, 'mcw-haproxy', commands
+  puts "[mcw-haproxy] haproxy server configuration complete"
 end
 
 def haproxy_config(server)
@@ -226,7 +226,7 @@ def haproxy_config(server)
     listen  web-proxy 0.0.0.0:80
             mode http
             balance roundrobin
-            server sxsw-web #{server.private_ip_address}:3000
+            server mcw-web #{server.private_ip_address}:3000
     ]
 end
 
@@ -248,7 +248,7 @@ def setup_hp_security_group
 
   puts "[security group] Creating security group multi-cloud-workshop"
   group = network_service.security_groups.create :name => 'multi-cloud-workshop',
-    :description => 'This group was created for the SXSW Cloud Portability with Multi-Cloud Toolkits workshop'
+    :description => 'This group was created for the Multi-Cloud Toolkits workshop'
 
   [80, 22, 3000, 3306].each do |port|
     network_service.security_group_rules.create :port_range_min => port,
@@ -264,7 +264,7 @@ def setup_aws_security_group
   return if service.security_groups.find {|group| group.name == 'multi-cloud-workshop' }
   puts "[security group] Creating security group multi-cloud-workshop"
 
-  group = service.security_groups.create :name => 'multi-cloud-workshop', :description => 'This group was created for the SXSW Cloud Portability with Multi-Cloud Toolkits workshop'
+  group = service.security_groups.create :name => 'multi-cloud-workshop', :description => 'This group was created for the Multi-Cloud Toolkits workshop'
   [80, 22, 3000, 3306].each do |port|
     group.authorize_port_range port..port, :ip_protocol => 'tcp'
   end
@@ -296,9 +296,9 @@ def build_environment
   setup_key_pair
   setup_object_storage
 
-  db_server = create_server('sxsw-db')
-  web_server = create_server('sxsw-web')
-  haproxy_server = create_server('sxsw-haproxy')
+  db_server = create_server('mcw-db')
+  web_server = create_server('mcw-web')
+  haproxy_server = create_server('mcw-haproxy')
 
   db_server.wait_for { ready? && sshable?}
   setup_db_server(db_server)
@@ -311,9 +311,9 @@ def build_environment
 
   puts "\nThe system should be successfully provisioned. You can access it at http://#{haproxy_server.public_ip_address}\n\n"
   puts "ssh access individual servers:\n"
-  puts "\t[sxsw-db]      ssh -i #{db_server.private_key_path} #{db_server.username}@#{db_server.public_ip_address}\n"
-  puts "\t[sxsw-web]     ssh -i #{web_server.private_key_path} #{web_server.username}@#{web_server.public_ip_address}\n"
-  puts "\t[sxsw-haproxy] ssh -i #{haproxy_server.private_key_path} #{haproxy_server.username}@#{haproxy_server.public_ip_address}\n"
+  puts "\t[mcw-db]      ssh -i #{db_server.private_key_path} #{db_server.username}@#{db_server.public_ip_address}\n"
+  puts "\t[mcw-web]     ssh -i #{web_server.private_key_path} #{web_server.username}@#{web_server.public_ip_address}\n"
+  puts "\t[mcw-haproxy] ssh -i #{haproxy_server.private_key_path} #{haproxy_server.username}@#{haproxy_server.public_ip_address}\n"
 
   puts "\n*** PLEASE REMEMBER TO DELETE YOUR SERVERS AND FILES AFTER THE WORKSHOP TO PREVENT UNEXPECTED CHARGES! ***\n\n"
 end
