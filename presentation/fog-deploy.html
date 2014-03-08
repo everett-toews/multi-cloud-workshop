@@ -51,9 +51,44 @@ $ bundle exec ruby multi-cloud-workshop.rb
 
         <section>
           <h2>Build Environment</h2>
-          <div class="gist-it">
-            <script src="http://gist-it.appspot.com/github/rackerlabs/multi-cloud-workshop/blob/gh-pages/fog/multi-cloud-workshop.rb?footer=minimal&slice=291:319"></script>
+          <div class="inline-code" data-markdown>
+            <script type="text/template">
+              ```ruby
+              def build_environment
+                puts "\n*** BUILDING SYSTEM USING #{provider.to_s.upcase} ***\n\n"
+
+                setup_security_group
+                setup_key_pair
+                setup_object_storage
+
+                db_server = create_server('sxsw-db')
+                web_server = create_server('sxsw-web')
+                haproxy_server = create_server('sxsw-haproxy')
+
+                db_server.wait_for { ready? && sshable?}
+                setup_db_server(db_server)
+
+                web_server.wait_for { ready?  && sshable? }
+                setup_webhead(web_server, db_server)
+
+                haproxy_server.wait_for { ready?  && sshable? }
+                setup_haproxy(haproxy_server, web_server)
+
+                puts "\nThe system should be successfully provisioned. You can access it at http://#{haproxy_server.public_ip_address}\n\n"
+                puts "ssh access individual servers:\n"
+                puts "\t[sxsw-db]      ssh -i #{db_server.private_key_path} #{db_server.username}@#{db_server.public_ip_address}\n"
+                puts "\t[sxsw-web]     ssh -i #{web_server.private_key_path} #{web_server.username}@#{web_server.public_ip_address}\n"
+                puts "\t[sxsw-haproxy] ssh -i #{haproxy_server.private_key_path} #{haproxy_server.username}@#{haproxy_server.public_ip_address}\n"
+
+                puts "\n*** PLEASE REMEMBER TO DELETE YOUR SERVERS AND FILES AFTER THE WORKSHOP TO PREVENT UNEXPECTED CHARGES! ***\n\n"
+              end
+              ```
+            </script>
+
           </div>
+          <!--<div class="gist-it">-->
+            <!--<script src="http://gist-it.appspot.com/github/rackerlabs/multi-cloud-workshop/blob/gh-pages/fog/multi-cloud-workshop.rb?footer=minimal&slice=291:319"></script>-->
+          <!--</div>-->
         </section>
         <section>
           <h2>Configuration</h2>
