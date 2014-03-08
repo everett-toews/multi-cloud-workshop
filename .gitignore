@@ -9,6 +9,7 @@ provider.properties
 jclouds/lib/
 jclouds/log/
 node.js/node_modules
+config.json
 target/
 .idea/
 *.iml
