@@ -1,94 +1,109 @@
-var async = require('async'),
-  compute = require('./lib/compute'),
-  https = require('https'),
-  config = require('./config.json'),
-  logging = require('./lib/logging'),
-  pkgcloud = require('pkgcloud'),
-  shutdown = require('./lib/shutdown'),
-  bootstrap = require('./lib/bootstrap'),
-  keys = require('./lib/keys'),
-  security = require('./lib/security-groups');
+var program = require('commander'),
+    logging = require('./lib/logging'),
+    config = require('./config.json');
 
-// Setup some logging helpers
-var log = logging.getLogger(config.logLevel);
+/**
+ * Configure our command line arguments
+ */
+program
+  .version('0.0.1')
+  .option('-p, --provider [provider]', 'Specify your provider: rackspace, aws, hpcloud')
+  .option('-l, --log [level]', 'Specify custom log level, [trace, debug, verbose, info, error]')
+  .parse(process.argv);
 
-// configure reasonable max socket limits
-https.globalAgent.maxSockets = 1000;
-
-// First lets create our three compute clients
-var clients = {
-  aws: pkgcloud.compute.createClient(config.settings.aws.client),
-  hp: pkgcloud.compute.createClient(config.settings.hpcloud.client),
-  rackspace: pkgcloud.compute.createClient(config.settings.rackspace.client)
-};
-
-// Wire up our logging
-Object.keys(clients).forEach(function(key) {
-  clients[key].on('log::*', logging.logFunction);
-});
-
-// get the provider name and action from the command line arguments
-var provider = process.argv[2],
-  action = process.argv[3];
-
-// If we get the destroy action, go clean up
-if (action === 'destroy') {
-  shutdown.shutdown(clients[provider], function(err) {
-    process.exit(err ? 1 : 0);
-  });
+if (!program.provider) {
+  program.outputHelp();
   return;
 }
 
-// This is where the magic happens
+/**
+ * Configure logging for the multi-cloud-workshop
+ * The default log level can be found in config.json
+ */
+var log = logging.getLogger(program.log || config.logLevel);
 
-log.info('Provisioning: ' + provider);
+demo(program.provider);
 
-var servers = {
-  'web-01': null,
-  'db-01': null,
-  'lb-01': null
-};
+function demo(provider) {
 
-async.series([
-  function(next) { keys.uploadSshKey(clients[provider], next); },
-  function(next) { security.createSecurityGroup(clients[provider], next); },
-  function(next) {
-    async.forEach(Object.keys(servers), function(name, cb) {
-      compute.createServer(clients[provider], name, function(err, server) {
-        if (err) {
-          cb(err);
-          return;
+  var async = require('async'),
+    compute = require('./lib/compute'),
+    https = require('https'),
+    pkgcloud = require('pkgcloud'),
+    keys = require('./lib/keys'),
+    security = require('./lib/security-groups'),
+    bootstrap = require('./lib/bootstrap');
+
+  /**
+   * Make sure we set a reasonable default for max-sockets.
+   * This is to allow high numbers of async calls over the network
+   */
+  https.globalAgent.maxSockets = 1000;
+
+  /**
+   * Create your pkgcloud compute client for your requested provider
+   */
+  var client = pkgcloud.compute.createClient(config.settings[provider].client);
+
+  /**
+   * Enable logging on the compute client
+   */
+  client.on('log::*', logging.logFunction);
+
+  // This is where the magic happens
+  log.info('Provisioning: ' + provider);
+
+  var servers = {
+    'web-01': null,
+    'db-01': null,
+    'lb-01': null
+  };
+
+  async.series([
+    function (next) {
+      keys.uploadSshKey(client, next);
+    },
+    function (next) {
+      security.createSecurityGroup(client, next);
+    },
+    function (next) {
+      async.forEach(Object.keys(servers), function (name, cb) {
+        compute.createServer(client, name, function (err, server) {
+          if (err) {
+            cb(err);
+            return;
+          }
+
+          servers[name] = server;
+          cb();
+        });
+      }, next);
+    },
+    function (next) {
+      var username = client.provider === 'rackspace' ? 'root' : 'ubuntu';
+
+      async.forEach(Object.keys(servers), function (name, cb) {
+        if (name === 'web-01') {
+          bootstrap.bootstrapWeb(username, servers, cb);
         }
+        else if (name === 'lb-01') {
+          bootstrap.bootstrapLb(username, servers, cb);
+        }
+        else if (name === 'db-01') {
+          bootstrap.bootstrapDb(username, servers, cb);
+        }
+        else {
+          cb({ unknownHost: true });
+        }
+      }, next);
+    }
+  ], function (err) {
+    if (err) {
+      log.error('Unable to provision environment', err);
+      process.exit(1);
+      return;
+    }
 
-        servers[name] = server;
-        cb();
-      });
-    }, next);
-  },
-  function(next) {
-    var username = clients[provider].provider === 'rackspace' ? 'root' : 'ubuntu';
-
-    async.forEach(Object.keys(servers), function(name, cb) {
-      if (name === 'web-01') {
-        bootstrap.bootstrapWeb(username, servers, cb);
-      }
-      else if (name === 'lb-01') {
-        bootstrap.bootstrapLb(username, servers, cb);
-      }
-      else if (name === 'db-01') {
-        bootstrap.bootstrapDb(username, servers, cb);
-      }
-      else {
-        cb({ unknownHost: true });
-      }
-    }, next);
-  }
-], function(err) {
-  if (err) {
-    log.error('Unable to provision environment', err);
-    process.exit(1);
-    return;
-  }
-
-  log.info('Success: ' + provider);
-});
+    log.info('Success: ' + provider);
+  });
+}

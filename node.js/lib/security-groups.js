@@ -57,68 +57,108 @@ exports.destroySecurityGroup = function(client, callback) {
 };
 
 exports.setupAwsSecurityGroup = function(client, callback) {
-  client.addGroup({
-    name: securityGroupName,
-    description: 'multi cloud portability workshop'
-  }, function(err) {
+  client.listGroups(function (err, groups) {
     if (err) {
       callback(err);
       return;
     }
 
-    function getRule(port) {
-      return { name: securityGroupName,
-        rules: {
-          'IpPermissions.1.IpProtocol': 'tcp',
-          'IpPermissions.1.IpRanges.1.CidrIp': '0.0.0.0/0',
-          'IpPermissions.1.FromPort': port,
-          'IpPermissions.1.ToPort': port
-        }
+    var found = false;
+    groups.forEach(function (group) {
+      if (group.groupName === securityGroupName) {
+        found = true;
       }
+    });
+
+    if (found) {
+      log.verbose('Found Existing Security Group: ' + client.provider);
+      callback();
+      return;
     }
 
-    async.forEach([
-      getRule(22), getRule(80), getRule(3000), getRule(3306)
-    ], function(item, next) {
-      client.addRules(item, function(err) {
-        if (err) {
-          log.error(err);
-        }
-        next(err);
-      });
+    client.addGroup({
+      name: securityGroupName,
+      description: 'multi cloud portability workshop'
     }, function(err) {
-      callback(err);
+      if (err) {
+        callback(err);
+        return;
+      }
+
+      function getRule(port) {
+        return { name: securityGroupName,
+          rules: {
+            'IpPermissions.1.IpProtocol': 'tcp',
+            'IpPermissions.1.IpRanges.1.CidrIp': '0.0.0.0/0',
+            'IpPermissions.1.FromPort': port,
+            'IpPermissions.1.ToPort': port
+          }
+        }
+      }
+
+      async.forEach([
+        getRule(22), getRule(80), getRule(3000), getRule(3306)
+      ], function(item, next) {
+        client.addRules(item, function(err) {
+          if (err) {
+            log.error(err);
+          }
+          next(err);
+        });
+      }, function(err) {
+        callback(err);
+      });
     });
   });
 };
 
 exports.setupOpenstackSecurityGroup = function(client, callback) {
-  client.addGroup({
-    name: securityGroupName,
-    description: 'multi cloud portability workshop'
-  }, function(err, group) {
+  client.listGroups(function(err, groups) {
     if (err) {
       callback(err);
       return;
     }
 
-    function getRule(port) {
-      return { groupId: group.id,
-        ipProtocol: 'tcp',
-        cidr: '0.0.0.0/0',
-        fromPort: port,
-        toPort: port
+    var found = false;
+    groups.forEach(function(group) {
+      if (group.name === securityGroupName) {
+        found = true;
       }
+    });
+
+    if (found) {
+      log.verbose('Found Existing Security Group: ' + client.provider);
+      callback();
+      return;
     }
 
-    client.addRules([
-      getRule(22), getRule(80), getRule(3000), getRule(3306)
-    ], function(err, rules) {
+    client.addGroup({
+      name: securityGroupName,
+      description: 'multi cloud portability workshop'
+    }, function(err, group) {
       if (err) {
-        log.error(err);
+        callback(err);
+        return;
       }
 
-      callback(err, rules);
+      function getRule(port) {
+        return { groupId: group.id,
+          ipProtocol: 'tcp',
+          cidr: '0.0.0.0/0',
+          fromPort: port,
+          toPort: port
+        }
+      }
+
+      client.addRules([
+        getRule(22), getRule(80), getRule(3000), getRule(3306)
+      ], function(err, rules) {
+        if (err) {
+          log.error(err);
+        }
+
+        callback(err, rules);
+      });
     });
   });
 };

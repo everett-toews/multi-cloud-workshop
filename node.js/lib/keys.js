@@ -7,11 +7,24 @@ var log = logging.getLogger(config.logLevel),
   securityGroupName = config.securityGroupName;
 
 exports.uploadSshKey = function(client, callback) {
-  log.verbose('Uploading SSH Key: ' + client.provider);
-  client.addKey({
-    name: securityGroupName,
-    key: fs.readFileSync(process.cwd() + config.keys.public).toString()
-  }, callback);
+  log.verbose('Checking if key exists: ' + client.provider);
+  client.getKey(securityGroupName, function(err, key) {
+    if (err && err.statusCode !== 404) {
+      callback(err);
+      return;
+    }
+    else if (!key) {
+      log.verbose('Uploading SSH Key: ' + client.provider);
+      client.addKey({
+        name: securityGroupName,
+        key: fs.readFileSync(process.cwd() + config.keys.public).toString()
+      }, callback);
+    }
+    else {
+      log.verbose('Using existing SSH Key: ' + client.provider);
+      callback();
+    }
+  });
 };
 
 exports.destroySshKey = function(client, callback) {
