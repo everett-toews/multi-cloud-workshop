@@ -50,23 +50,34 @@ function demo(provider) {
    */
   client.on('log::*', logging.logFunction);
 
-  // This is where the magic happens
-  log.info('Provisioning: ' + provider);
+  log.info('Starting Provisioning: ' + provider);
 
+  /**
+   * Create a local cache of servers to be created
+   */
   var servers = {
     'web-01': null,
     'db-01': null,
     'lb-01': null
   };
 
+  /**
+   * This is where we deploy & provision our application
+   *
+   * Each of the functions in the array is called in turn, exiting early
+   * if any error happens. We're using async, a standard node.js
+   * flow control package
+   */
   async.series([
+    function (next) { keys.uploadSshKey(client, next); },
+    function (next) { security.createSecurityGroup(client, next); },
     function (next) {
-      keys.uploadSshKey(client, next);
-    },
-    function (next) {
-      security.createSecurityGroup(client, next);
-    },
-    function (next) {
+      /**
+       * Create each of the servers
+       *
+       * These calls will be executed in parallel as a function of
+       * async.forEach
+       */
       async.forEach(Object.keys(servers), function (name, cb) {
         compute.createServer(client, name, function (err, server) {
           if (err) {
@@ -74,30 +85,46 @@ function demo(provider) {
             return;
           }
 
+          // cache the created server in our servers object
           servers[name] = server;
           cb();
         });
       }, next);
     },
     function (next) {
+      /**
+       * bootstrap our servers
+       *
+       * Generally, you'd be doing this with a more robust/professional
+       * configuration platform like chef/puppet/salt/ansible.
+       *
+       * This example is intentionally simplified to be more accesible
+       */
       var username = client.provider === 'rackspace' ? 'root' : 'ubuntu';
-
       async.forEach(Object.keys(servers), function (name, cb) {
-        if (name === 'web-01') {
-          bootstrap.bootstrapWeb(username, servers, cb);
-        }
-        else if (name === 'lb-01') {
-          bootstrap.bootstrapLb(username, servers, cb);
-        }
-        else if (name === 'db-01') {
-          bootstrap.bootstrapDb(username, servers, cb);
-        }
-        else {
-          cb({ unknownHost: true });
+        switch (name) {
+          case 'web-01':
+            bootstrap.bootstrapWeb(username, servers, cb);
+            break;
+          case 'lb-01':
+            bootstrap.bootstrapLb(username, servers, cb);
+            break;
+          case 'db-01':
+            bootstrap.bootstrapDb(username, servers, cb);
+            break;
         }
       }, next);
     }
   ], function (err) {
+    /**
+     * End of provisioning
+     *
+     * We'll get here either if:
+     *
+     * a) provisioning was successful
+     * b) any error happened along the way to provision
+     * 
+     */
     if (err) {
       log.error('Unable to provision environment', err);
       process.exit(1);
