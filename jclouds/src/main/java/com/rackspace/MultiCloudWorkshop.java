@@ -322,8 +322,6 @@ public class MultiCloudWorkshop {
                     .addStatement(exec("sudo apt-get install -y openjdk-7-jre-headless"))
                     .addStatement(exec("sudo wget http://mirrors.jenkins-ci.org/war/latest/jenkins.war"))
                     .addStatement(exec("sudo java -jar jenkins.war --httpPort=80 &"))
-//                    .addStatement(exec("sudo apt-get -q -y install apache2"))
-//                    .addStatement(exec("echo 'Hello from " + node.getPublicAddresses() + "' > /var/www/index.html"))
                     .render(OsFamily.UNIX);
 
             computeService.runScriptOnNode(node.getId(), script, options);
