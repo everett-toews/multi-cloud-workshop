@@ -8,6 +8,17 @@
  * Copyright (C) 2013 Hakim El Hattab, http://hakim.se
  */
 
+body {
+    background: rgb(27, 29, 38); /* Old browsers */
+    background: -moz-linear-gradient(top, rgba(27, 29, 38, 1) 0%, rgba(52, 53, 63, 1) 99%); /* FF3.6+ */
+    background: -webkit-gradient(linear, left top, left bottom, color-stop(0%, rgba(27, 29, 38, 1)), color-stop(99%, rgba(52, 53, 63, 1))); /* Chrome,Safari4+ */
+    background: -webkit-linear-gradient(top, rgba(27, 29, 38, 1) 0%, rgba(52, 53, 63, 1) 99%); /* Chrome10+,Safari5.1+ */
+    background: -o-linear-gradient(top, rgba(27, 29, 38, 1) 0%, rgba(52, 53, 63, 1) 99%); /* Opera 11.10+ */
+    background: -ms-linear-gradient(top, rgba(27, 29, 38, 1) 0%, rgba(52, 53, 63, 1) 99%); /* IE10+ */
+    background: linear-gradient(to bottom, rgba(27, 29, 38, 1) 0%, rgba(52, 53, 63, 1) 99%); /* W3C */
+    filter: progid:DXImageTransform.Microsoft.gradient(startColorstr='#1b1d26', endColorstr='#34353f', GradientType=0); /* IE6-9 */
+}
+
 h1 h2 {
 	font-weight: bold;
 }
