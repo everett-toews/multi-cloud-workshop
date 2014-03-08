@@ -241,6 +241,15 @@ def setup_object_storage
   end
 end
 
+def setup_security_group
+  # Currently the api is different for each of our three providers.
+  # In the future we hope to fix this abstraction so doing a different
+  # version for provider is no longer necessary.
+  return if provider == :rackspace
+  setup_aws_security_group if provider == :aws
+  setup_hp_security_group if provider == :hp
+end
+
 def security_group_exist?
   group = service.security_groups.find {|group| group.name == 'multi-cloud-workshop' } != nil
 end
@@ -278,15 +287,6 @@ def setup_aws_security_group
   [80, 22, 3000, 3306].each do |port|
     group.authorize_port_range port..port, :ip_protocol => 'tcp'
   end
-end
-
-def setup_security_group
-  # Currently the api is different for each of our three providers.
-  # In the future we hope to fix this abstraction so doing a different
-  # version for provider is no longer necessary.
-  return if provider == :rackspace
-  setup_aws_security_group if provider == :aws
-  setup_hp_security_group if provider == :hp
 end
 
 def setup_key_pair
