@@ -54,93 +54,403 @@ $ bundle exec ruby multi-cloud-workshop.rb
           <div class="inline-code" data-markdown>
             <script type="text/template">
               ```ruby
-              def build_environment
-                puts "\n*** BUILDING SYSTEM USING #{provider.to_s.upcase} ***\n\n"
+def build_environment
+  puts "\n*** BUILDING SYSTEM USING #{provider.to_s.upcase} ***\n\n"
 
-                setup_security_group
-                setup_key_pair
-                setup_object_storage
+  setup_security_group
+  setup_key_pair
+  setup_object_storage
 
-                db_server = create_server('sxsw-db')
-                web_server = create_server('sxsw-web')
-                haproxy_server = create_server('sxsw-haproxy')
+  db_server = create_server('mcw-db')
+  web_server = create_server('mcw-web')
+  haproxy_server = create_server('mcw-haproxy')
 
-                db_server.wait_for { ready? && sshable?}
-                setup_db_server(db_server)
+  db_server.wait_for { ready? && sshable?}
+  setup_db_server(db_server)
 
-                web_server.wait_for { ready?  && sshable? }
-                setup_webhead(web_server, db_server)
+  web_server.wait_for { ready?  && sshable? }
+  setup_webhead(web_server, db_server)
 
-                haproxy_server.wait_for { ready?  && sshable? }
-                setup_haproxy(haproxy_server, web_server)
+  haproxy_server.wait_for { ready?  && sshable? }
+  setup_haproxy(haproxy_server, web_server)
 
-                puts "\nThe system should be successfully provisioned. You can access it at http://#{haproxy_server.public_ip_address}\n\n"
-                puts "ssh access individual servers:\n"
-                puts "\t[sxsw-db]      ssh -i #{db_server.private_key_path} #{db_server.username}@#{db_server.public_ip_address}\n"
-                puts "\t[sxsw-web]     ssh -i #{web_server.private_key_path} #{web_server.username}@#{web_server.public_ip_address}\n"
-                puts "\t[sxsw-haproxy] ssh -i #{haproxy_server.private_key_path} #{haproxy_server.username}@#{haproxy_server.public_ip_address}\n"
+  puts "\nThe system should be successfully provisioned. You can access it at http://#{haproxy_server.public_ip_address}\n\n"
+  puts "ssh access individual servers:\n"
+  puts "\t[mcw-db]      ssh -i #{db_server.private_key_path} #{db_server.username}@#{db_server.public_ip_address}\n"
+  puts "\t[mcw-web]     ssh -i #{web_server.private_key_path} #{web_server.username}@#{web_server.public_ip_address}\n"
+  puts "\t[mcw-haproxy] ssh -i #{haproxy_server.private_key_path} #{haproxy_server.username}@#{haproxy_server.public_ip_address}\n"
 
-                puts "\n*** PLEASE REMEMBER TO DELETE YOUR SERVERS AND FILES AFTER THE WORKSHOP TO PREVENT UNEXPECTED CHARGES! ***\n\n"
-              end
+  puts "\n*** PLEASE REMEMBER TO DELETE YOUR SERVERS AND FILES AFTER THE WORKSHOP TO PREVENT UNEXPECTED CHARGES! ***\n\n"
+end
               ```
             </script>
-
           </div>
-          <!--<div class="gist-it">-->
-            <!--<script src="http://gist-it.appspot.com/github/rackerlabs/multi-cloud-workshop/blob/gh-pages/fog/multi-cloud-workshop.rb?footer=minimal&slice=291:319"></script>-->
-          <!--</div>-->
         </section>
         <section>
           <h2>Configuration</h2>
-          <div class="gist-it">
-            <script src="http://gist-it.appspot.com/github/rackerlabs/multi-cloud-workshop/blob/gh-pages/fog/multi-cloud-workshop.rb?footer=minimal&slice=21:76"></script>
-          </div>
+          <div class="inline-code" data-markdown>
+            <script type="text/template">
+              ```ruby
+@config = {}
+
+# Please set the PROVIDER environment variable to aws, hp, or rackspace.
+#
+# You will also need to set the approprate environment variables for your desired cloud
+#
+# Amazon:
+#   AWS_ACCESS_KEY
+#   AWS_SECRET_ACCESS_KEY
+#
+# HP:
+#  HP_SECRET_KEY
+#  HP_ACCESS_KEY
+#  HP_TENANT_ID
+#
+# Rackspace:
+#   RACKSPACE_USERNAME
+#   RACKSPACE_API_KEY
+#
+@config[:rackspace] = {
+  :service_opts => {
+    :provider => 'rackspace',
+    :version => :v2,
+    :rackspace_username => ENV['RACKSPACE_USERNAME'] || Fog.credentials[:rackspace_username],
+    :rackspace_api_key =>  ENV['RACKSPACE_API_KEY'] || Fog.credentials[:rackspace_api_key],
+    :rackspace_region => :ord,
+  },
+  :flavor_name => '1 GB Performance',
+  :image_name => 'Ubuntu 12.04 LTS'
+}
+
+@config[:aws] = {
+  :service_opts => {
+    :provider => 'aws',
+    :aws_access_key_id => ENV['AWS_ACCESS_KEY'] || Fog.credentials[:aws_access_key_id],
+    :aws_secret_access_key => ENV['AWS_SECRET_ACCESS_KEY'] || Fog.credentials[:aws_secret_access_key],
+    :region => 'us-west-2',
+  },
+  :server_opts => {
+    :username => 'ubuntu',
+    :groups => ['multi-cloud-workshop']
+  },
+  :flavor_name => 'Medium Instance',
+  :image_name => 'ubuntu\/images\/ubuntu-precise-12.04-amd64-server-20131003'
+}
+@config[:hp] = {
+  :service_opts => {
+    :provider => 'hp',
+    :version => :v2,
+    :hp_secret_key => ENV['HP_SECRET_KEY'] || Fog.credentials[:hp_secret_key],
+    :hp_access_key => ENV['HP_ACCESS_KEY'] || Fog.credentials[:hp_access_key],
+    :hp_tenant_id => ENV['HP_TENANT_ID'] || Fog.credentials[:hp_tenant_id],
+    :hp_avl_zone => 'region-a.geo-1'
+  },
+  :server_opts => {
+    :username => 'ubuntu',
+    :security_groups => ['multi-cloud-workshop']
+  },
+  :flavor_name => 'standard.xsmall',
+  :image_name => 'Ubuntu Precise 12.04 LTS Server 64-bit 20121026'
+}
+
+def config
+  @config[provider]
+end
+
+def provider
+  raise "Please set PROVIDER environment variable to aws, hp, or rackspace" unless ENV['PROVIDER']
+  @provider ||= ENV['PROVIDER'].downcase.to_sym
+end
+
+def service
+  @service ||= Fog::Compute.new config[:service_opts]
+end
+              ```
+            </script>
+		  </div>
         </section>
         <section>
           <h2>Security Groups</h2>
-          <div class="gist-it">
-            <script src="http://gist-it.appspot.com/github/rackerlabs/multi-cloud-workshop/blob/gh-pages/fog/multi-cloud-workshop.rb?footer=minimal&slice=240:277"></script>
-          </div>
+          <div class="inline-code" data-markdown>
+            <script type="text/template">
+              ```ruby
+def setup_security_group
+  # Currently the api is different for each of our three providers.
+  # In the future we hope to fix this abstraction so doing a different
+  # version for provider is no longer necessary.
+  return if provider == :rackspace
+  setup_aws_security_group if provider == :aws
+  setup_hp_security_group if provider == :hp
+end
+
+def security_group_exist?
+  group = service.security_groups.find {|group| group.name == 'multi-cloud-workshop' } != nil
+end
+
+def setup_hp_security_group
+  network_service = Fog::HP::Network.new config[:service_opts]
+  return if network_service.security_groups.find {|group| group.name == 'multi-cloud-workshop' }
+
+  puts "[security group] Creating security group multi-cloud-workshop"
+  group = network_service.security_groups.create :name => 'multi-cloud-workshop',
+    :description => 'This group was created for the Multi-Cloud Toolkits workshop'
+
+  # Ordinarly we would create a http proxy security group which just opens up http port (80)
+  # and possibly create an ssh group openning up the ssh port (22). We have chosen to create
+  # one security group openning up all ports used ports to simplify our example and allow for debuging.
+  [80, 22, 3000, 3306].each do |port|
+    network_service.security_group_rules.create :port_range_min => port,
+      :port_range_max => port,
+      :protocol => :tcp,
+      :direction => :ingress,
+      :tenant_id => group.tenant_id,
+      :security_group_id => group.id
+  end
+end
+
+def setup_aws_security_group
+  return if service.security_groups.find {|group| group.name == 'multi-cloud-workshop' }
+  puts "[security group] Creating security group multi-cloud-workshop"
+
+  group = service.security_groups.create :name => 'multi-cloud-workshop', :description => 'This group was created for the Multi-Cloud Toolkits workshop'
+
+  # Ordinarly we would create a http proxy security group which just opens up http port (80)
+  # and possibly create an ssh group openning up the ssh port (22). We have chosen to create
+  # one security group openning up all ports used ports to simplify our example and allow for debuging.
+  [80, 22, 3000, 3306].each do |port|
+    group.authorize_port_range port..port, :ip_protocol => 'tcp'
+  end
+end
+              ```
+            </script>
+		  </div>
         </section>
         <section>
           <h2>Key Pairs</h2>
-          <div class="gist-it">
-            <script src="http://gist-it.appspot.com/github/rackerlabs/multi-cloud-workshop/blob/gh-pages/fog/multi-cloud-workshop.rb?footer=minimal&slice=278:290"></script>
-          </div>
+          <div class="inline-code" data-markdown>
+            <script type="text/template">
+              ```ruby
+def setup_key_pair
+  return if key_pair_exist?
+  puts "[key pair] creating key pair multi-cloud-workshop"
+
+  # Please note everyone is using the same keypairs to aid in debuging! This is also a security risk!!
+  # If you use this code in production please generate your own keys or allow the cloud to generate a keypair.
+  service.key_pairs.create :name => 'multi-cloud-workshop',
+    :public_key => File.read('multi-cloud-workshop.pub'),
+    :private_key => File.read('multi-cloud-workshop.key')
+end
+
+def key_pair_exist?
+  service.key_pairs.get('multi-cloud-workshop') != nil
+end
+              ```
+            </script>
+		  </div>
         </section>
         <section>
           <h2>Setup Object Storage</h2>
-          <div class="gist-it">
-            <script src="http://gist-it.appspot.com/github/rackerlabs/multi-cloud-workshop/blob/gh-pages/fog/multi-cloud-workshop.rb?footer=minimal&slice=232:239"></script>
-          </div>
+          <div class="inline-code" data-markdown>
+            <script type="text/template">
+              ```ruby
+def setup_object_storage
+  storage = Fog::Storage.new config[:service_opts]
+  dir = storage.directories.get 'multi-cloud-workshop'
+  unless dir
+    storage.directories.create :key => 'multi-cloud-workshop', :public => true
+  end
+end
+              ```
+            </script>
+		  </div>
         </section>
 
         <section>
           <h2>Create Servers</h2>
-          <div class="gist-it">
-            <script src="http://gist-it.appspot.com/github/rackerlabs/multi-cloud-workshop/blob/gh-pages/fog/multi-cloud-workshop.rb?footer=minimal&slice=77:100"></script>
-          </div>
+          <div class="inline-code" data-markdown>
+            <script type="text/template">
+              ```ruby
+def create_server(name)
+  puts "[#{name}] Server Creating"
+  server_config = config[:server_opts] || {}
+  server_config.merge!({
+    :name => name,
+    :flavor_id => flavor.id,
+    :image_id => image.id,
+    :private_key_path => 'multi-cloud-workshop.key',
+    :key_name => 'multi-cloud-workshop'
+  })
+
+  server = service.servers.create server_config
+  assign_public_ip_address_if_necessary(server)
+  server
+end
+
+def flavor
+  @flavor ||= service.flavors.find {|flavor| flavor.name =~ /#{config[:flavor_name]}/ }
+end
+
+def image
+  @image ||= service.images.find {|image| image.name =~ /#{config[:image_name]}/}
+end
+
+def assign_public_ip_address_if_necessary(server)
+  # HP does not automatically assign a public ip address when a server is provisioned.
+  return unless provider == :hp
+  server.wait_for { ready? }
+  address = service.addresses.create :server => server
+end
+              ```
+            </script>
+		  </div>
         </section>
 
         <section>
           <h2>Setup Database</h2>
-          <div class="gist-it">
-            <script src="http://gist-it.appspot.com/github/rackerlabs/multi-cloud-workshop/blob/gh-pages/fog/multi-cloud-workshop.rb?footer=minimal&slice=157:182"></script>
-          </div>
+          <div class="inline-code" data-markdown>
+            <script type="text/template">
+              ```ruby
+def setup_db_server(server)
+  puts "[mcw-db] Started database server configuration"
+  commands = [
+    "sudo apt-get update",
+    "sudo apt-get upgrade -y",
+    "sudo apt-get update",
+    "sudo debconf-set-selections <<< 'mysql-server mysql-server/root_password password admin123'",
+    "sudo debconf-set-selections <<< 'mysql-server mysql-server/root_password_again password admin123'",
+    "sudo apt-get -y install mysql-server",
+
+    # change the bind address /etc/mysql/my.cnf
+    %Q[sudo sed -ie 's/bind-address.*/bind-address = #{server.private_ip_address}/' /etc/mysql/my.cnf],
+    # restart server
+    "sudo service mysql restart",
+    # create user
+    %q[sudo mysql -padmin123 -e "CREATE USER 'mcw'@'10.%' IDENTIFIED BY 'austin123'"],
+    # create database
+    "sudo mysql -padmin123 -e 'CREATE DATABASE mcw_demo'",
+    # grant rights
+    %q[sudo mysql -padmin123 -e "grant all privileges on mcw_demo.* to 'mcw'@'%' identified by 'austin123'"],
+  ]
+
+  ssh server, 'mcw-db', commands
+  puts "[mcw-db] database server configuration complete"
+end
+              ```
+            </script>
+		  </div>
         </section>
 
         <section>
           <h2>Setup Web Servers</h2>
-          <div class="gist-it">
-            <script src="http://gist-it.appspot.com/github/rackerlabs/multi-cloud-workshop/blob/gh-pages/fog/multi-cloud-workshop.rb?footer=minimal&slice=114:156"></script>
-          </div>
+          <div class="inline-code" data-markdown>
+            <script type="text/template">
+              ```ruby
+def setup_webhead(web_server, db_server)
+  # Ordinarily we would use our rails application in conjunction with a web server like ngix or apache.
+  # We have opted to launch rails directly to simplify our example.
+  puts "[mcw-web] Started web server configuration"
+  commands = [
+   "sudo apt-get update",
+   "sudo apt-get upgrade -y",
+   "sudo apt-get -y install build-essential ruby1.9.1 ruby1.9.1-dev libopenssl-ruby1.9.1 git libpq-dev",
+   "sudo apt-get -y install libmysqlclient18 libmysqlclient-dev libmagickwand-dev libmagickcore-dev libmagickcore4-extra libgraphviz-dev libgvc5",
+   "sudo gem install bundler",
+   "git clone https://github.com/rackerlabs/multi-cloud-demo-app demo-app",
+   "cd demo-app; bundle install --deployment",
+   "echo '#{database_yml(db_server)}' > demo-app/config/database.yml",
+   "echo '#{carrierwave_config}' > demo-app/config/initializers/carrierwave.rb",
+   "cd demo-app; bundle exec rake db:migrate",
+   "cd demo-app; bundle exec rails s -d; sleep 1"
+  ]
+
+  ssh web_server, "mcw-web", commands
+  puts "[mcw-web] web server configuration complete"
+end
+
+def database_yml(db_server)
+  %Q[
+    development:
+      adapter: mysql2
+      encoding: utf8
+      database: mcw_demo
+      pool: 5
+      username: mcw
+      password: austin123
+      host: #{db_server.private_ip_address}
+      port: 3306
+    ]
+end
+
+def carrierwave_config
+  %Q[
+    CarrierWave.configure do |config|
+      config.fog_credentials = #{config[:service_opts].to_s}
+      config.fog_directory  = "multi-cloud-workshop"
+    end
+    ]
+end
+
+              ```
+            </script>
+		  </div>
         </section>
 
         <section>
           <h2>Setup Load Balancer</h2>
-          <div class="gist-it">
-            <script src="http://gist-it.appspot.com/github/rackerlabs/multi-cloud-workshop/blob/gh-pages/fog/multi-cloud-workshop.rb?footer=minimal&slice=183:231"></script>
-          </div>
+          <div class="inline-code" data-markdown>
+            <script type="text/template">
+              ```ruby
+def setup_haproxy(server, web_server)
+  puts "[mcw-haproxy] Started haproxy server configuration"
+  commands = [
+    "sudo apt-get update",
+    "sudo apt-get upgrade -y",
+    "sudo apt-get -y install haproxy",
+    %q[sudo sed -ie 's/ENABLED=0/ENABLED=1/' /etc/default/haproxy],
+    %Q[sudo sh -c "echo '#{haproxy_config(web_server)}' > /etc/haproxy/haproxy.cfg"],
+    "sudo service haproxy restart"
+  ]
+
+  ssh server, 'mcw-haproxy', commands
+  puts "[mcw-haproxy] haproxy server configuration complete"
+end
+
+def haproxy_config(server)
+  %Q[
+    global
+            log 127.0.0.1   local0
+            log 127.0.0.1   local1 notice
+            #log loghost    local0 info
+            maxconn 4096
+            #chroot /usr/share/haproxy
+            user haproxy
+            group haproxy
+            daemon
+            #debug
+            #quiet
+            stats socket /tmp/haproxy
+
+    defaults
+            log global
+            mode http
+            option httplog
+            option dontlognull
+            retries 3
+            option redispatch
+            maxconn 2000
+            contimeout 5000
+            clitimeout 50000
+            srvtimeout 50000
+
+    listen  web-proxy 0.0.0.0:80
+            mode http
+            balance roundrobin
+            server mcw-web #{server.private_ip_address}:3000
+    ]
+end
+              ```
+            </script>
+		  </div>
         </section>
 
         <section>
