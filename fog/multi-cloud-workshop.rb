@@ -100,6 +100,7 @@ def image
 end
 
 def assign_public_ip_address_if_necessary(server)
+  # HP does not automatically assign a public ip address when a server is provisioned.
   return unless provider == :hp
   server.wait_for { ready? }
   address = service.addresses.create :server => server
@@ -113,6 +114,8 @@ def ssh(server, name, commands, debug = true)
 end
 
 def setup_webhead(web_server, db_server)
+  # Ordinarily we would use our rails application in conjunction with a web server like ngix or apache.
+  # We have opted to launch rails directly to simplify our example.
   puts "[mcw-web] Started web server configuration"
   commands = [
    "sudo apt-get update",
@@ -250,6 +253,9 @@ def setup_hp_security_group
   group = network_service.security_groups.create :name => 'multi-cloud-workshop',
     :description => 'This group was created for the Multi-Cloud Toolkits workshop'
 
+  # Ordinarly we would create a http proxy security group which just opens up http port (80)
+  # and possibly create an ssh group openning up the ssh port (22). We have chosen to create
+  # one security group openning up all ports used ports to simplify our example and allow for debuging.
   [80, 22, 3000, 3306].each do |port|
     network_service.security_group_rules.create :port_range_min => port,
       :port_range_max => port,
@@ -265,12 +271,19 @@ def setup_aws_security_group
   puts "[security group] Creating security group multi-cloud-workshop"
 
   group = service.security_groups.create :name => 'multi-cloud-workshop', :description => 'This group was created for the Multi-Cloud Toolkits workshop'
+
+  # Ordinarly we would create a http proxy security group which just opens up http port (80)
+  # and possibly create an ssh group openning up the ssh port (22). We have chosen to create
+  # one security group openning up all ports used ports to simplify our example and allow for debuging.
   [80, 22, 3000, 3306].each do |port|
     group.authorize_port_range port..port, :ip_protocol => 'tcp'
   end
 end
 
 def setup_security_group
+  # Currently the api is different for each of our three providers.
+  # In the future we hope to fix this abstraction so doing a different
+  # version for provider is no longer necessary.
   return if provider == :rackspace
   setup_aws_security_group if provider == :aws
   setup_hp_security_group if provider == :hp
@@ -280,6 +293,8 @@ def setup_key_pair
   return if key_pair_exist?
   puts "[key pair] creating key pair multi-cloud-workshop"
 
+  # Please note everyone is using the same keypairs to aid in debuging! This is also a security risk!!
+  # If you use this code in production please generate your own keys or allow the cloud to generate a keypair.
   service.key_pairs.create :name => 'multi-cloud-workshop',
     :public_key => File.read('multi-cloud-workshop.pub'),
     :private_key => File.read('multi-cloud-workshop.key')
