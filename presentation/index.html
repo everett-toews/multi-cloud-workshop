@@ -38,7 +38,7 @@
       <!-- Any section element inside of this container is displayed as a slide -->
       <div class="slides">
         <section>
-          <h1 style="color: #bc9b33">Cloud Portability</h1>
+          <h1 class="highlight">Cloud Portability</h1>
           <h2>with Multi-Cloud Toolkits</h2>
           <center>
             <table>
@@ -87,7 +87,7 @@
         <section>
           <h2>Links & Notes</h2>
           <ul>
-            <li><a href="http://j.mp/mcw-sxsw">Etherpad</a></li>
+            <li><a href="http://j.mp/mcw-sxsw">Etherpad (http://j.mp/mcw-sxsw)</a></li>
             <li>Have a text editor</li>
             <li>Use your command prompt</li>
           </ul>
@@ -142,7 +142,7 @@
         <section>
           <h2>Software</h2>
           <h2>as a Service</h2>
-          <h2>(SaaS)</h2>
+          <h2 class="highlight">(SaaS)</h2>
         </section>
 
         <section>
@@ -152,7 +152,7 @@
         <section>
           <h2>Platform</h2>
           <h2>as a Service</h2>
-          <h2>(PaaS)</h2>
+          <h2 class="highlight">(PaaS)</h2>
         </section>
 
         <section>
@@ -162,7 +162,7 @@
         <section>
           <h2>Infrastructure</h2>
           <h2>as a Service</h2>
-          <h2>(IaaS)</h2>
+          <h2 class="highlight">(IaaS)</h2>
         </section>
 
         <section>
@@ -245,26 +245,26 @@
 
         <section>
           <h2>Java</h2>
-          <h2>Apache jclouds</h2>
+          <h2 class="highlight">Apache jclouds</h2>
         </section>
 
         <section>
           <h2>Node.js</h2>
-          <h2>pkgcloud</h2>
+          <h2 class="highlight">pkgcloud</h2>
         </section>
 
         <section>
           <h2>Python</h2>
-          <h2>Apache libcloud</h2>
+          <h2 class="highlight">Apache libcloud</h2>
         </section>
 
         <section>
           <h2>Ruby</h2>
-          <h2>Fog</h2>
+          <h2 class="highlight">Fog</h2>
         </section>
 
         <section id="getting-started">
-          <h2>Let's get started</h2>
+          <h2 class="highlight">Let's get started</h2>
           <ol>
             <li>Get your cloud credentials</li>
             <li>Install the toolkits</li>
@@ -384,8 +384,8 @@
         <section>
           <h2>jclouds</h2>
           <ol>
-            <li>Copy <code class="code">src/main/resources/provider.properties.template</code> to <code class="code">src/main/resources/provider.properties</code></li>
-            <li>Open <code class="code">src/main/resources/provider.properties</code></li>
+            <li>Copy <code class="highlight">src/main/resources/provider.properties.template</code> to <code class="highlight">src/main/resources/provider.properties</code></li>
+            <li>Open <code class="highlight">src/main/resources/provider.properties</code></li>
             <li>Edit provider (rackspace or hp or aws)</li>
             <li>Edit provider.identity</li>
             <li>Edit provider.credential</li>
@@ -416,8 +416,8 @@
         <section>
           <h2>pkgcloud</h2>
           <ol>
-            <li>Open <code class="code">config.json</code></li>
-            <li>Add Credentials for your provider (rackspace/aws/hpcloud)
+            <li>Open <code class="highlight">config.json</code></li>
+            <li>Add Credentials for your provider:<br /><span class="highlight">rackspace, aws or hpcloud</span>.
             </li>
           </ol>
         </section>
@@ -454,7 +454,8 @@
         <section>
           <h2>fog</h2>
           <ol>
-            <li>Set PROVIDER environment variable to <strong>aws</strong>, <strong>hp</strong>, or <strong>rackspace</strong></li>
+            <li>Set <span class="highlight">PROVIDER</span> environment variable to <span class="highlight">aws</span>,
+              <span class="highlight">hp</span>, or <span class="highlight">rackspace</span></li>
             <li>Set the following environment variables based on Provider</li>
           </ol>
         </section>
@@ -468,15 +469,15 @@
             </tr>
             <tr>
               <td>aws</td>
-              <td>AWS_ACCESS_KEY, AWS_SECRET_ACCESS_KEY</td>
+              <td><span class="highlight">AWS_ACCESS_KEY, AWS_SECRET_ACCESS_KEY</span></td>
             </tr>
             <tr>
               <td>hp</td>
-              <td>HP_SECRET_KEY, HP_ACCESS_KEY, HP_TENANT_ID</td>
+              <td><span class="highlight">HP_SECRET_KEY, HP_ACCESS_KEY, HP_TENANT_ID</span></td>
             </tr>
             <tr>
               <td>rackspace</td>
-              <td>RACKSPACE_USERNAME, RACKSPACE_API_KEY</td>
+              <td><span class="highlight">RACKSPACE_USERNAME, RACKSPACE_API_KEY</span></td>
             </tr>
           </table>
         </section>
