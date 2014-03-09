@@ -6,6 +6,8 @@
 *.ear
 provider.properties
 
+libcloud.conf
+
 jclouds/lib/
 jclouds/log/
 node.js/node_modules
