@@ -82,7 +82,7 @@ function batchSSHCommands(username, server, commands, callback) {
 }
 
 exports.uploadTemplate = function(server, template, locals, callback) {
-  var calledBack = false, count = 0, maxAttempts = 5;
+  var calledBack = false, count = 0, maxAttempts = 15;
 
   function attempt() {
     var c = new Connection();
@@ -164,7 +164,7 @@ exports.uploadTemplate = function(server, template, locals, callback) {
     if (err && (count < maxAttempts)) {
       count++;
       log.error('Unable to upload template to Server, retrying (' + server.name + ',' + server.id + ')', err.code);
-      setTimeout(attempt, 3500);
+      setTimeout(attempt, 10000);
       return;
     }
 
@@ -197,7 +197,7 @@ function getAddress(server, priv) {
  *
  */
 function execSSHCommand(username, server, command, callback) {
-  var calledBack = false, count = 0, maxAttempts = 5;
+  var calledBack = false, count = 0, maxAttempts = 15;
 
   function attempt() {
     var c = new Connection();
@@ -251,7 +251,7 @@ function execSSHCommand(username, server, command, callback) {
     if (err && (count < maxAttempts)) {
       count++;
       log.error('Unable to complete command on Server, retrying (' + server.name + ',' + server.id + ')', err.code);
-      setTimeout(attempt, 3500);
+      setTimeout(attempt, 10000);
       return;
     }
 
