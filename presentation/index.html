@@ -506,11 +506,66 @@
         <section>
           <h2>libcloud</h2>
           <ol>
-            <li>Open file?</li>
+            <li>Open libcloud.conf.template</li>
             <li>Edit Provider</li>
             <li>Edit Identity</li>
             <li>Edit Credential</li>
+            <li>Indicate Active Provider</li>
+            <li>Save as libcloud.conf</li>
           </ol>
+        </section>
+
+         <section>
+          <h2>libcloud</h2>
+          <script type="text/template">
+          '''
+              [active]
+provider = rackspace
+web_deployment = deployment/web.deploy
+haproxy = deployment/haproxy.cfg
+haproxy_deploy = deployment/haproxy.deploy
+db_deployment = deployment/db.deploy
+private_key = keys/multi-cloud-workshop
+public_key = keys/multi-cloud-workshop.pub
+
+[rackspace]
+identity = 
+credential = 
+region = iad
+compute_driver = rackspace
+lb_driver = rackspace
+image = Ubuntu 12.04 LTS (Precise Pangolin)
+size = performance1-1
+ssh_user = root
+
+[hp]
+identity = 
+credential = 
+region = az-1.region-a.geo-1
+compute_driver=openstack
+ex_force_auth_url = https://region-a.geo-1.identity.hpcloudsvc.com:35357/v2.0/tokens
+ex_force_auth_version = 2.0_password
+ex_tenant_name = sxsw
+ex_force_service_region = az-1.region-a.geo-1
+ex_force_service_name = Compute
+tenant_id = 10632282507080
+ex_force_base_url = https://region-a.geo-1.compute.hpcloudsvc.com/v2/%(tenant_id)s
+image = Ubuntu Server 12.04.4 LTS (amd64 20140227) - Partner Image
+size = 100
+ssh_user = ubuntu
+
+[amazon]
+identity = 
+credential = 
+region = us-west-2
+compute_driver = ec2_us_west_oregon
+lb_driver = elb
+image = ubuntu/images/ubuntu-precise-12.04-amd64-server-20140217.1
+size = m1.small
+ssh_user = ubuntu
+'''
+            </script>
+          </div>
         </section>
 
         <section>
