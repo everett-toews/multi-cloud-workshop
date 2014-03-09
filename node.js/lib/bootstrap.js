@@ -20,13 +20,15 @@ exports.bootstrapWeb = function(username, servers, callback) {
     'sudo apt-get update',
     'sudo apt-get upgrade -y',
     'sudo apt-get install -y nodejs git-core mysql-client',
-    'cd /usr/local/src && npm install bootstrap-blog',
+    'cd /usr/local/src && sudo npm install bootstrap-blog',
     setupApp(servers['db-01'], servers['lb-01']),
-    'cd /usr/local/src/node_modules/bootstrap-blog && npm install jade@0.27.7',
-    'cd /usr/local/src && export PORT=3000 && nohup node app.js > app.log 2> app.err < /dev/null &'
+    util.format('sudo cp %s %s',
+      config.templates.blogApp.temporaryPath,
+      config.templates.blogApp.path),
+    'cd /usr/local/src/node_modules/bootstrap-blog && sudo npm install jade@0.27.7',
+    'cd /usr/local/src && export PORT=3000 && sudo nohup node app.js > app.log 2> app.err < /dev/null &'
   ];
 
-  // TODO create DB config file
   batchSSHCommands(username, servers['web-01'], webCommands, callback);
 };
 
@@ -46,9 +48,9 @@ exports.bootstrapDb = function(username, servers, callback) {
       config.templates.mysqlConfig.temporaryPath,
       config.templates.mysqlConfig.path),
     'sudo /etc/init.d/mysql restart',
-    'mysql -uroot -padmin123 -e "create database blog;"',
-    'mysql -uroot -padmin123 -e "CREATE USER \'blog\'@\'10.0.0.0/255.0.0.0\' IDENTIFIED BY \'blog-pwd\';"',
-    'mysql -uroot -padmin123 -e "GRANT ALL ON blog.* TO \'blog\'@\'10.0.0.0/255.0.0.0\';"'
+    'sudo mysql -uroot -padmin123 -e "create database blog;"',
+    'sudo mysql -uroot -padmin123 -e "CREATE USER \'blog\'@\'10.0.0.0/255.0.0.0\' IDENTIFIED BY \'blog-pwd\';"',
+    'sudo mysql -uroot -padmin123 -e "GRANT ALL ON blog.* TO \'blog\'@\'10.0.0.0/255.0.0.0\';"'
   ];
 
   batchSSHCommands(username, servers['db-01'], dbCommands, callback);
@@ -179,12 +181,14 @@ exports.uploadTemplate = function(server, template, locals, username, callback) 
     c.on('close', function(had_error) {
       log.debug('Connection :: close');
     });
-    c.connect({
+    var opts = {
       host: compute.getAddress(server),
       port: 22,
       username: username,
       privateKey: fs.readFileSync(process.cwd() + config.keys.private)
-    });
+    };
+    log.debug(opts);
+    c.connect(opts);
   }
 
   attempt();

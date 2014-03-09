@@ -1,0 +1,456 @@
+<!doctype html>
+<html lang="en">
+
+  <head>
+    <meta charset="utf-8">
+
+    <title>Cloud Portability with Multi-Cloud Toolkits</title>
+
+    <meta name="description" content="A workshop on Cloud Portability with Multi-Cloud Toolkits">
+    <meta name="author" content="Dana Bauer, Ken Perkins, Kyle Rames, Everett Toews">
+
+    <meta name="apple-mobile-web-app-capable" content="yes" />
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+
+    <link rel="stylesheet" href="reveal.js/css/reveal.min.css">
+    <link rel="stylesheet" href="reveal.js/css/theme/moon.css" id="theme">
+    <link rel="stylesheet" href="reveal.js/css/multi-cloud-workshop.css">
+
+    <!-- For syntax highlighting -->
+    <link rel="stylesheet" href="reveal.js/lib/css/zenburn.css">
+
+    <!-- If the query includes 'print-pdf', use the PDF print sheet -->
+    <script>
+      document.write( '<link rel="stylesheet" href="reveal.js/css/print/' + ( window.location.search.match( /print-pdf/gi ) ? 'pdf' : 'paper' ) + '.css" type="text/css" media="print">' );
+    </script>
+
+    <!--[if lt IE 9]>
+    <script src="reveal.js/lib/js/html5shiv.js"></script>
+    <![endif]-->
+  </head>
+
+  <body>
+
+    <div class="reveal">
+
+      <!-- Any section element inside of this container is displayed as a slide -->
+      <div class="slides">
+        <section>
+          <h2>pkgcloud</h2>
+          <h2>Code Walkthrough</h2>
+        </section>
+
+        <section>
+          <h2>Running the application</h2>
+          <pre><code data-trim>
+$ node workshop.js --provider rackspace
+          </code></pre>
+        </section>
+
+        <section>
+          <h2>Main</h2>
+          <div class="inline-code" data-markdown>
+            <script type="text/template">
+              ```javascript
+  /**
+   * This is where we deploy & provision our application
+   *
+   * Each of the functions in the array is called in turn, exiting early
+   * if any error happens. We're using async, a standard node.js
+   * flow control package
+   */
+  async.series([
+    function (next) { keys.uploadSshKey(client, next); },
+    function (next) { security.createSecurityGroup(client, next); },
+    function (next) {
+      /**
+       * Create each of the servers
+       *
+       * These calls will be executed in parallel as a function of
+       * async.forEach
+       */
+      async.forEach(Object.keys(servers), function (name, cb) {
+        compute.createServer(client, name, function (err, server) {
+          if (err) {
+            cb(err);
+            return;
+          }
+
+          // cache the created server in our servers object
+          servers[name] = server;
+          cb();
+        });
+      }, next);
+    },
+    function (next) {
+      /**
+       * bootstrap our servers
+       *
+       * Generally, you'd be doing this with a more robust/professional
+       * configuration platform like chef/puppet/salt/ansible.
+       *
+       * This example is intentionally simplified to be more accesible
+       */
+      var username = client.provider === 'rackspace' ? 'root' : 'ubuntu';
+      async.forEach(Object.keys(servers), function (name, cb) {
+        switch (name) {
+          case 'web-01':
+            bootstrap.bootstrapWeb(username, servers, cb);
+            break;
+          case 'lb-01':
+            bootstrap.bootstrapLb(username, servers, cb);
+            break;
+          case 'db-01':
+            bootstrap.bootstrapDb(username, servers, cb);
+            break;
+        }
+      }, next);
+    }
+  ], function (err) {
+    /**
+     * End of provisioning
+     *
+     * We'll get here either if:
+     *
+     * a) provisioning was successful
+     * b) any error happened along the way to provision
+     *
+     */
+    if (err) {
+      log.error('Unable to provision environment', err);
+      process.exit(1);
+      return;
+    }
+
+    log.info('Success: ' + provider);
+
+    var t = new Table();
+
+    Object.keys(servers).forEach(function(key) {
+      t.cell('Name', key);
+      t.cell('Public IP', compute.getAddress(servers[key]));
+      t.cell('Private IP', compute.getAddress(servers[key], true));
+      t.newRow();
+    });
+
+    log.info(t.toString());
+
+    log.info('Open the blog in your browser: http://' + compute.getAddress(servers['lb-01']));
+  });
+              ```
+            </script>
+          </div>
+        </section>
+        <section>
+          <h2>Configuration</h2>
+          <div class="inline-code" data-markdown>
+            <script type="text/template">
+              ```javascript
+var program = require('commander'),
+    logging = require('./lib/logging'),
+    config = require('./config.json'),
+    Table = require('easy-table');
+
+/**
+ * Configure our command line arguments
+ */
+program
+  .version('0.0.1')
+  .option('-p, --provider [provider]', 'Specify your provider: rackspace, aws, hpcloud')
+  .option('-l, --log [level]', 'Specify custom log level, [trace, debug, verbose, info, error]')
+  .parse(process.argv);
+
+if (!program.provider) {
+  program.outputHelp();
+  return;
+}
+
+              ```
+            </script>
+		  </div>
+        </section>
+        <section>
+          <h2>Security Groups</h2>
+          <div class="inline-code" data-markdown>
+            <script type="text/template">
+              ```javascript
+  log.verbose('Creating Security Group: ' + client.provider);
+  if (client.provider === 'rackspace') {
+    log.info('Skipping SG: ' + client.provider);
+    callback();
+  }
+  else if (client.provider === 'openstack') {
+    exports.setupOpenstackSecurityGroup(client, callback);
+  }
+  else if (client.provider === 'amazon') {
+    exports.setupAwsSecurityGroup(client, callback);
+  }
+  else {
+    callback({ unknownProvider: true });
+  }
+              ```
+            </script>
+		  </div>
+        </section>
+        <section>
+          <h2>Key Pairs</h2>
+          <div class="inline-code" data-markdown>
+            <script type="text/template">
+              ```javascript
+  log.verbose('Checking if key exists: ' + client.provider);
+  client.getKey(securityGroupName, function(err, key) {
+    if (err && err.statusCode !== 404) {
+      callback(err);
+      return;
+    }
+    else if (!key) {
+      log.verbose('Uploading SSH Key: ' + client.provider);
+      client.addKey({
+        name: securityGroupName,
+        key: fs.readFileSync(process.cwd() + config.keys.public).toString()
+      }, callback);
+    }
+    else {
+      log.verbose('Using existing SSH Key: ' + client.provider);
+      callback();
+    }
+  });
+              ```
+            </script>
+		  </div>
+        </section>
+
+        <section>
+          <h2>Create Servers</h2>
+          <div class="inline-code" data-markdown>
+            <script type="text/template">
+              ```javascript
+exports.createServer = function(client, name, callback) {
+
+  function createOptions() {
+    var options;
+    switch (client.provider) {
+      case 'amazon':
+        options = {
+          name: name,
+          flavor: config.settings.aws.flavorId,
+          image: config.settings.aws.imageId,
+          SecurityGroup: config.securityGroupName,
+          keyname: config.securityGroupName
+        };
+        break;
+      case 'openstack':
+        options = {
+          name: name,
+          flavor: config.settings.hpcloud.flavorId,
+          image: config.settings.hpcloud.imageId,
+          keyname: config.securityGroupName,
+          securityGroups: [
+            { name: config.securityGroupName }
+          ]
+        };
+        break;
+      case 'rackspace':
+        options =  {
+          name: name,
+          flavor: config.settings.rackspace.flavorId,
+          image: config.settings.rackspace.imageId,
+          keyname: config.securityGroupName
+        }
+    }
+    return options;
+  }
+
+  log.verbose('Creating Server (' + name +'): ' + client.provider);
+  client.createServer(createOptions(), function(err, server) {
+    if (err) {
+      callback(err);
+      return;
+    }
+
+    var interval = Math.floor(Math.random() * (30000 - 25000 + 1) + 25000)
+    log.verbose('Server Created (' + name + ',' + server.id +'), Waiting for RUNNING status: ' + client.provider);
+    server.setWait({ status: server.STATUS.running }, interval, 60 * 10 * 1000, function(err) {
+      if (err) {
+        callback(err);
+        return;
+      }
+
+      log.verbose('Server Online (' + name + ',' + server.id + '): ' + client.provider, {
+        id: server.id,
+        name: server.name,
+        addresses: server.addresses
+      });
+
+      // HP doesn't have public IP address bound by default, so we need to call os-floating-ip
+      if (client.provider === 'openstack') {
+
+        client.allocateNewFloatingIp(function(err, floatingIp) {
+          if (err) {
+            callback(err);
+            return;
+          }
+
+          client.addFloatingIp(server, floatingIp, function(err) {
+            if (err) {
+              callback(err);
+              return;
+            }
+
+            client.getServer(server, function(err, server) {
+              if (err) {
+                callback(err);
+                return;
+              }
+
+              log.verbose('Server Online Plus IPs (' + name + ',' + server.id + '): ' + client.provider, {
+                id: server.id,
+                name: server.name,
+                addresses: server.addresses
+              });
+
+              callback(null, server);
+            });
+          });
+        });
+
+        return
+      }
+
+      callback(null, server);
+    });
+  });
+};
+              ```
+            </script>
+		  </div>
+        </section>
+
+        <section>
+          <h2>Setup Database</h2>
+          <div class="inline-code" data-markdown>
+            <script type="text/template">
+              ```javascript
+  var dbCommands = [
+    'sudo apt-get update',
+    'sudo apt-get upgrade -y',
+    'sudo apt-get update',
+    'sudo debconf-set-selections <<< "mysql-server mysql-server/root_password password admin123"',
+    'sudo debconf-set-selections <<< "mysql-server mysql-server/root_password_again password admin123"',
+    'sudo apt-get -y install mysql-server',
+    copyMysqlConfig(servers['db-01']),
+    util.format('sudo cp %s %s',
+      config.templates.mysqlConfig.temporaryPath,
+      config.templates.mysqlConfig.path),
+    'sudo /etc/init.d/mysql restart',
+    'sudo mysql -uroot -padmin123 -e "create database blog;"',
+    'sudo mysql -uroot -padmin123 -e "CREATE USER \'blog\'@\'10.0.0.0/255.0.0.0\' IDENTIFIED BY \'blog-pwd\';"',
+    'sudo mysql -uroot -padmin123 -e "GRANT ALL ON blog.* TO \'blog\'@\'10.0.0.0/255.0.0.0\';"'
+  ];
+
+  batchSSHCommands(username, servers['db-01'], dbCommands, callback);
+              ```
+            </script>
+		  </div>
+        </section>
+
+        <section>
+          <h2>Setup Web Servers</h2>
+          <div class="inline-code" data-markdown>
+            <script type="text/template">
+              ```javascript
+  var webCommands = [
+    'sudo apt-get install software-properties-common',
+    'sudo apt-add-repository ppa:chris-lea/node.js',
+    'sudo apt-get update',
+    'sudo apt-get upgrade -y',
+    'sudo apt-get install -y nodejs git-core mysql-client',
+    'cd /usr/local/src && sudo npm install bootstrap-blog',
+    setupApp(servers['db-01'], servers['lb-01']),
+    util.format('sudo cp %s %s',
+      config.templates.blogApp.temporaryPath,
+      config.templates.blogApp.path),
+    'cd /usr/local/src/node_modules/bootstrap-blog && sudo npm install jade@0.27.7',
+    'cd /usr/local/src && export PORT=3000 && sudo nohup node app.js > app.log 2> app.err < /dev/null &'
+  ];
+
+  batchSSHCommands(username, servers['web-01'], webCommands, callback);
+              ```
+            </script>
+		  </div>
+        </section>
+
+        <section>
+          <h2>Setup Load Balancer</h2>
+          <div class="inline-code" data-markdown>
+            <script type="text/template">
+              ```javascript
+  var lbCommands = [
+    'sudo apt-get update',
+    'sudo apt-get upgrade -y',
+    'sudo apt-get -y install haproxy',
+    copyHaProxyInitDefault,
+    util.format('sudo cp %s %s',
+      config.templates.haproxyInitDefault.temporaryPath,
+      config.templates.haproxyInitDefault.path),
+    copyHaProxyConfig(servers['web-01']),
+    util.format('sudo cp %s %s',
+      config.templates.loadBalancer.temporaryPath,
+      config.templates.loadBalancer.path),
+    'sudo service haproxy restart'
+  ];
+  batchSSHCommands(username, servers['lb-01'], lbCommands, callback);
+              ```
+            </script>
+		  </div>
+        </section>
+
+        <section>
+          <h2>Clean Up & Delete Resources</h2>
+        </section>
+
+        <section>
+          <p><a href="index.html#/app-code">Back to the Presentation</a></p>
+        </section>
+
+      </div>
+
+    </div>
+
+    <script src="reveal.js/lib/js/head.min.js"></script>
+    <script src="reveal.js/js/reveal.min.js"></script>
+
+    <script>
+
+      // Full list of configuration options available here:
+      // https://github.com/hakimel/reveal.js#configuration
+      Reveal.initialize({
+        controls: false,
+        progress: false,
+        history: true,
+        center: true,
+
+        theme: Reveal.getQueryHash().theme, // available themes are in /css/theme
+        transition: Reveal.getQueryHash().transition || 'none', // default/cube/page/concave/zoom/linear/fade/none
+
+        // Parallax scrolling
+        // parallaxBackgroundImage: 'https://s3.amazonaws.com/hakim-static/reveal-js/reveal-parallax-1.jpg',
+        // parallaxBackgroundSize: '2100px 900px',
+
+        // Optional libraries used to extend on reveal.js
+        dependencies: [
+          { src: 'reveal.js/lib/js/classList.js', condition: function() { return !document.body.classList; } },
+          { src: 'reveal.js/plugin/markdown/marked.js', condition: function() { return !!document.querySelector( '[data-markdown]' ); } },
+          { src: 'reveal.js/plugin/markdown/markdown.js', condition: function() { return !!document.querySelector( '[data-markdown]' ); } },
+          { src: 'reveal.js/plugin/highlight/highlight.js', async: true, callback: function() { hljs.initHighlightingOnLoad(); } },
+          { src: 'reveal.js/plugin/zoom-js/zoom.js', async: true, condition: function() { return !!document.body.classList; } },
+          { src: 'reveal.js/plugin/notes/notes.js', async: true, condition: function() { return !!document.body.classList; } }
+        ]
+      });
+
+    </script>
+
+  </body>
+</html>
