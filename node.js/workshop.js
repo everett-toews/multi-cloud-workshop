@@ -1,6 +1,7 @@
 var program = require('commander'),
     logging = require('./lib/logging'),
-    config = require('./config.json');
+    config = require('./config.json'),
+    Table = require('easy-table');
 
 /**
  * Configure our command line arguments
@@ -132,5 +133,18 @@ function demo(provider) {
     }
 
     log.info('Success: ' + provider);
+
+    var t = new Table();
+
+    Object.keys(servers).forEach(function(key) {
+      t.cell('Name', key);
+      t.cell('Public IP', compute.getAddress(servers[key]));
+      t.cell('Private IP', compute.getAddress(servers[key], true));
+      t.newRow();
+    });
+
+    log.info(t.toString());
+
+    log.info('Open the blog in your browser: http://' + compute.getAddress(servers['lb-01']));
   });
 }

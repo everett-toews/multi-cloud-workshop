@@ -100,3 +100,19 @@ exports.createServer = function(client, name, callback) {
     });
   });
 };
+
+exports.getAddress = function(server, priv) {
+  var address = priv ? server.addresses.private[0] : server.addresses.public[0];
+
+  if (typeof address === 'object') {
+    address = priv
+      ? server.addresses.private.filter(findAddress)[0].addr
+      : server.addresses.public.filter(findAddress)[0].addr;
+  }
+
+  return address;
+
+  function findAddress(addy) {
+    return addy.version === 4;
+  }
+};

@@ -1,0 +1,14 @@
+var blog = require('bootstrap-blog');
+
+blog.start({
+  title: "My Multi-Cloud-Workshop Blog",
+  adminGoogleEmail: 'blog@example.org',
+  liveDomain: 'http://<%= lbIp %>',
+  database: {
+    database: 'blog',
+    user: 'blog',
+    password: 'blog-pwd',
+    host: '<%= dbIp %>',
+    dbPort: 3306
+  }
+});

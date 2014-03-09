@@ -8,8 +8,22 @@
   "templates": {
     "loadBalancer": {
       "body": "/templates/haproxy.conf.ejs",
-      "temporaryPath": "/home/ubuntu/haproxy.cfg",
+      "temporaryPath": "/usr/local/src/haproxy.cfg",
       "path": "/etc/haproxy/haproxy.cfg"
+    },
+    "haproxyInitDefault": {
+      "body": "/templates/haproxy.ejs",
+      "temporaryPath": "/usr/local/src/haproxy",
+      "path": "/etc/default/haproxy"
+    },
+    "mysqlConfig": {
+      "body": "/templates/my.cnf.ejs",
+      "temporaryPath": "/usr/local/src/my.cnf",
+      "path": "/etc/mysql/my.cnf"
+    },
+    "blogApp": {
+      "body": "/templates/app.js.ejs",
+      "temporaryPath": "/usr/local/src/app.js"
     }
   },
   "settings": {
