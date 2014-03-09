@@ -294,14 +294,14 @@
         <section>
           <h2><a href="https://mycloud.rackspace.com/">Rackspace</a></h2>
         </section>
-        
+
         <section>
           <h2>Log in to the control panel</h2>
 
           <p>https://mycloud.rackspace.com/</p>
           <img class="stretch" src="reveal.js/img/rackspace_login.png">
         </section>
-        
+
         <section>
           <h2>From the menu, choose Account Settings</h2>
 
@@ -446,7 +446,7 @@
           <ol>
             <li>Copy <code class="highlight">src/main/resources/provider.properties.template</code> to <code class="highlight">src/main/resources/provider.properties</code></li>
             <li>Open <code class="highlight">src/main/resources/provider.properties</code></li>
-            <li>Edit provider (rackspace or hp or aws)</li>
+            <li>Edit provider (<code class="highlight">rackspace</code> or <code class="highlight">hp</code> or <code class="highlight">aws</code>)</li>
             <li>Edit provider.identity</li>
             <li>Edit provider.credential</li>
           </ol>
@@ -503,7 +503,7 @@
             </script>
           </div>
         </section>
-        
+
         <section>
           <h2>libcloud</h2>
           <ol>
@@ -531,8 +531,8 @@
               public_key = keys/multi-cloud-workshop.pub
 
               [rackspace]
-              identity = 
-              credential = 
+              identity =
+              credential =
               region = iad
               compute_driver = rackspace
               lb_driver = rackspace
