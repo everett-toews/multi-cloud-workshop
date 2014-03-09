@@ -1,0 +1,25 @@
+#!/usr/bin/env bash
+sudo apt-get update
+sudo apt-get upgrade -y
+sudo apt-get install -y apache2 libapache2-mod-wsgi git python-virtualenv
+
+# Clone the bikeshed repo. We install it later, but need apache configs first.
+git clone https://github.com/briancurtin/bikeshed bikeshed-src
+sudo cp bikeshed-src/deployment/config/httpd.conf /etc/apache2/
+
+# Put the WSGI and HTML files where the config expects them.
+# Adjust the wsgi script so it's readable by Apache.
+sudo mkdir -p /var/www/bikeshed && sudo cp -R bikeshed-src/deployment/code/* $_ && sudo chmod o+r $_/bikeshed.wsgi
+
+# Create our environment and install bikeshed into it.
+virtualenv --setuptools bikeshed-env
+source bikeshed-env/bin/activate
+pip install -r bikeshed-src/requirements.txt
+pip install -e bikeshed-src/
+
+# Make the home dir accessible by Apache.
+# Ideally this would be installed as a different user...
+sudo chmod o+rx /root
+
+# Restart apache2
+sudo service apache2 restart
