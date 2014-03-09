@@ -153,7 +153,7 @@ def carrierwave_config
   %Q[
     CarrierWave.configure do |config|
       config.fog_credentials = #{config[:service_opts].to_s}
-      config.fog_directory  = "multi-cloud-workshop"
+      config.fog_directory  = "#{directory_name}"
     end
     ]
 end
@@ -235,10 +235,14 @@ end
 
 def setup_object_storage
   storage = Fog::Storage.new config[:service_opts]
-  dir = storage.directories.get 'multi-cloud-workshop'
+  dir = storage.directories.get directory_name
   unless dir
-    storage.directories.create :key => 'multi-cloud-workshop', :public => true
+    storage.directories.create :key => directory_name, :public => true
   end
+end
+
+def directory_name
+  @directory_name ||= "mcw-#{SecureRandom.uuid}"
 end
 
 def setup_security_group
